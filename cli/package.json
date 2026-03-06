@@ -1,0 +1,28 @@
+{
+  "name": "agent-fluency-score",
+  "version": "0.1.0",
+  "description": "Benchmark how well frameworks and tools work with AI coding agents",
+  "type": "module",
+  "bin": {
+    "afs": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/index.ts",
+    "start": "node dist/index.js",
+    "test": "playwright test"
+  },
+  "dependencies": {
+    "chalk": "^5.3.0",
+    "commander": "^12.1.0",
+    "inquirer": "^9.2.0"
+  },
+  "devDependencies": {
+    "@clerk/testing": "^2.0.1",
+    "@playwright/test": "^1.48.0",
+    "@types/inquirer": "^9.0.0",
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.5.0"
+  }
+}

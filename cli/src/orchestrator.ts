@@ -1,0 +1,895 @@
+import { execFileSync, execSync } from "child_process";
+import fs from "fs";
+import path from "path";
+import chalk from "chalk";
+import type { Task, TaskResult, BenchmarkRun, AgentMetrics } from "./types.js";
+import { aggregateMetrics } from "./types.js";
+import categories from "./tasks/index.js";
+import { calculateSummary, generateScorecard } from "./scorecard.js";
+
+const CYCLE_CAP = 10;
+const AGENT_TIMEOUT = 10 * 60 * 1000; // 10 minutes
+const BUILD_TIMEOUT = 2 * 60 * 1000; // 2 minutes
+const TEST_TIMEOUT = 3 * 60 * 1000; // 3 minutes
+const ERROR_TAIL = 3000; // last N chars of error output
+
+// ---------------------------------------------------------------------------
+// Debug logger — writes verbose output to benchmark-debug.log in the toolDir
+// ---------------------------------------------------------------------------
+
+let debugLogPath: string | null = null;
+
+function initDebugLog(toolDir: string): void {
+  debugLogPath = path.join(toolDir, "benchmark-debug.log");
+  fs.writeFileSync(debugLogPath, `=== Benchmark debug log — ${new Date().toISOString()} ===\n\n`);
+}
+
+function debugLog(message: string): void {
+  const timestamp = new Date().toISOString();
+  const line = `[${timestamp}] ${message}\n`;
+  if (debugLogPath) {
+    fs.appendFileSync(debugLogPath, line);
+  }
+  // Also print to console in dim for visibility
+  console.log(chalk.dim(`  [debug] ${message}`));
+}
+
+// ---------------------------------------------------------------------------
+// Cycle-level detail log — written to benchmark-cycles.json alongside the run
+// ---------------------------------------------------------------------------
+
+interface CycleDetail {
+  taskId: number;
+  cycle: number;
+  promptSent: string;
+  agentExitCode: number;
+  agentSessionId: string | null;
+  agentStdoutHead: string;
+  agentStderrHead: string;
+  agentDurationMs: number;
+  buildExitCode: number | null;
+  buildError: string | null;
+  testExitCode: number | null;
+  testError: string | null;
+  agentTimedOut: boolean;
+  result: "agent_failed" | "build_failed" | "tests_failed" | "passed";
+  metrics: AgentMetrics | null;
+}
+
+let cycleDetails: CycleDetail[] = [];
+let cycleLogPath: string | null = null;
+
+function initCycleLog(toolDir: string): void {
+  cycleLogPath = path.join(toolDir, "benchmark-cycles.json");
+  cycleDetails = [];
+}
+
+function saveCycleLog(): void {
+  if (cycleLogPath) {
+    fs.writeFileSync(cycleLogPath, JSON.stringify(cycleDetails, null, 2));
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Command execution — uses execFileSync (no shell) to avoid argument mangling
+// ---------------------------------------------------------------------------
+
+interface CommandResult {
+  stdout: string;
+  stderr: string;
+  exitCode: number;
+  durationMs: number;
+  timedOut: boolean;
+}
+
+function runCommand(
+  command: string,
+  args: string[],
+  options: { cwd?: string; timeout?: number; env?: Record<string, string> }
+): CommandResult {
+  const start = Date.now();
+  try {
+    const stdout = execFileSync(command, args, {
+      cwd: options.cwd,
+      timeout: options.timeout,
+      encoding: "utf-8",
+      env: (() => {
+        const env = { ...process.env, ...options.env };
+        // Allow spawning Claude CLI from within a Claude session
+        delete env.CLAUDECODE;
+        return env;
+      })(),
+      stdio: ["pipe", "pipe", "pipe"],
+      maxBuffer: 10 * 1024 * 1024,
+    });
+    return { stdout, stderr: "", exitCode: 0, durationMs: Date.now() - start, timedOut: false };
+  } catch (err: any) {
+    const timedOut = err.killed === true;
+    return {
+      stdout: err.stdout?.toString() || "",
+      stderr: err.stderr?.toString() || err.message || "",
+      exitCode: err.status ?? 1,
+      durationMs: Date.now() - start,
+      timedOut,
+    };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Agent invocation
+// ---------------------------------------------------------------------------
+
+interface AgentResult {
+  output: string;
+  rawStdout: string;
+  sessionId: string | null;
+  exitCode: number;
+  durationMs: number;
+  timedOut: boolean;
+}
+
+function invokeAgent(
+  prompt: string,
+  sessionId: string | null,
+  cwd: string
+): AgentResult {
+  const args: string[] = [];
+
+  // Only resume if we have a real session ID (non-empty string)
+  if (sessionId && sessionId.length > 0) {
+    args.push("--resume", sessionId, "-p", prompt);
+  } else {
+    args.push("-p", prompt);
+  }
+  args.push("--output-format", "json", "--dangerously-skip-permissions");
+
+  debugLog(`Invoking: claude ${args.map((a) => a.includes(" ") ? `"${a}"` : a).join(" ")}`);
+  debugLog(`  cwd: ${cwd}`);
+
+  const result = runCommand("claude", args, { cwd, timeout: AGENT_TIMEOUT });
+
+  if (result.timedOut) {
+    debugLog(`  Agent timed out after ${result.durationMs}ms — process was killed`);
+    console.log(chalk.red(`  WARNING: Agent timed out after ${result.durationMs}ms — process was killed`));
+  }
+  debugLog(`  exit code: ${result.exitCode}`);
+  debugLog(`  duration: ${result.durationMs}ms`);
+  debugLog(`  stdout length: ${result.stdout.length} chars`);
+  debugLog(`  stderr length: ${result.stderr.length} chars`);
+
+  if (result.stdout.length > 0) {
+    debugLog(`  stdout (first 500): ${result.stdout.slice(0, 500)}`);
+  }
+  if (result.stderr.length > 0) {
+    debugLog(`  stderr (first 500): ${result.stderr.slice(0, 500)}`);
+  }
+
+  // Parse session ID from JSON output
+  let parsedSessionId: string | null = null;
+  try {
+    const jsonOutput = JSON.parse(result.stdout);
+    if (jsonOutput.session_id) {
+      parsedSessionId = jsonOutput.session_id;
+      debugLog(`  session_id (from JSON): ${parsedSessionId}`);
+    } else {
+      debugLog(`  WARNING: JSON parsed but no session_id field found. Keys: ${Object.keys(jsonOutput).join(", ")}`);
+    }
+  } catch {
+    // stdout wasn't valid JSON — try regex fallback
+    const combined = result.stdout + result.stderr;
+    const sessionMatch = combined.match(/"session_id"\s*:\s*"([^"]+)"/);
+    if (sessionMatch) {
+      parsedSessionId = sessionMatch[1];
+      debugLog(`  session_id (from regex): ${parsedSessionId}`);
+    } else {
+      debugLog(`  WARNING: Could not parse session_id from output`);
+      debugLog(`  Full stdout: ${result.stdout.slice(0, 2000)}`);
+      debugLog(`  Full stderr: ${result.stderr.slice(0, 2000)}`);
+    }
+  }
+
+  // Warn loudly if invocation finished suspiciously fast
+  if (result.durationMs < 5000 && result.exitCode !== 0) {
+    debugLog(`  WARNING: Agent exited in ${result.durationMs}ms with code ${result.exitCode} — likely a CLI error, not a real run`);
+    console.log(chalk.red(`  WARNING: claude exited in ${result.durationMs}ms (exit ${result.exitCode}) — check debug log`));
+  }
+
+  return {
+    output: result.stdout + result.stderr,
+    rawStdout: result.stdout,
+    sessionId: parsedSessionId,
+    exitCode: result.exitCode,
+    durationMs: result.durationMs,
+    timedOut: result.timedOut,
+  };
+}
+
+function truncateError(error: string): string {
+  if (error.length <= ERROR_TAIL) return error;
+  return "..." + error.slice(-ERROR_TAIL);
+}
+
+function head(s: string, n: number): string {
+  return s.length <= n ? s : s.slice(0, n) + "...";
+}
+
+function parseAgentMetrics(stdout: string, wallTimeMs: number): AgentMetrics | null {
+  try {
+    const json = JSON.parse(stdout);
+    return {
+      durationMs: wallTimeMs,
+      apiTimeMs: json.duration_api_ms ?? 0,
+      turns: json.num_turns ?? 0,
+      costUsd: json.total_cost_usd ?? 0,
+      inputTokens: json.usage?.input_tokens ?? 0,
+      outputTokens: json.usage?.output_tokens ?? 0,
+      cacheCreationTokens: json.usage?.cache_creation_input_tokens ?? 0,
+      cacheReadTokens: json.usage?.cache_read_input_tokens ?? 0,
+      webSearches: json.usage?.server_tool_use?.web_search_requests ?? 0,
+      webFetches: json.usage?.server_tool_use?.web_fetch_requests ?? 0,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function tierNumber(tier: string): number {
+  const tierMap: Record<string, number> = {
+    "Basic Setup": 1,
+    "Core Feature": 2,
+    Integration: 3,
+    Production: 4,
+    Advanced: 5,
+  };
+  return tierMap[tier] || 1;
+}
+
+function buildTestGlobs(upToTier: number): string[] {
+  const globs: string[] = [];
+  for (let t = 1; t <= upToTier; t++) {
+    globs.push(`tier${t}-`);
+  }
+  return globs;
+}
+
+// ---------------------------------------------------------------------------
+// Core: executeTask
+// ---------------------------------------------------------------------------
+
+interface ExecuteTaskOptions {
+  task: Task;
+  toolDir: string;
+  toolName: string;
+  toolDisplayName: string;
+  tier: number;
+  isFirstTask: boolean;
+  sessionId: string | null;
+  testsDir: string;
+}
+
+interface ExecuteTaskResult {
+  taskResult: TaskResult;
+  sessionId: string | null;
+}
+
+export function executeTask(options: ExecuteTaskOptions): ExecuteTaskResult {
+  const { task, toolDir, toolName, toolDisplayName, tier, isFirstTask, testsDir } = options;
+  let { sessionId } = options;
+
+  // Replace {{tool}} placeholder with actual tool display name
+  const resolvedPrompt = task.prompt.replace(/\{\{tool\}\}/g, toolDisplayName);
+
+  console.log(
+    chalk.blue(`\n${"=".repeat(60)}\nTask ${task.id}: ${task.tier} — ${task.description}\n${"=".repeat(60)}`)
+  );
+  debugLog(`Starting task ${task.id} (${task.tier})`);
+  debugLog(`Resolved prompt: ${resolvedPrompt}`);
+  debugLog(`Session ID from previous task: ${sessionId ?? "(none)"}`);
+
+  let correctionCycles = 0;
+  let outcome: "working" | "partial" | "failed" = "failed";
+  let firstAttemptSuccess = false;
+  let notes = "";
+  const errorHistory: string[] = [];
+
+  for (let cycle = 0; cycle <= CYCLE_CAP; cycle++) {
+    let prompt: string;
+
+    if (cycle === 0) {
+      prompt = resolvedPrompt;
+      console.log(chalk.cyan(`  Cycle ${cycle}: Sending initial prompt to agent...`));
+    } else {
+      // Error correction — notes holds the error message from previous iteration
+      prompt = notes;
+      console.log(chalk.yellow(`  Cycle ${cycle}: Sending error feedback to agent...`));
+    }
+
+    debugLog(`--- Task ${task.id}, Cycle ${cycle} ---`);
+
+    // Build the cycle detail record
+    const cycleDetail: CycleDetail = {
+      taskId: task.id,
+      cycle,
+      promptSent: head(prompt, 500),
+      agentExitCode: -1,
+      agentSessionId: null,
+      agentStdoutHead: "",
+      agentStderrHead: "",
+      agentDurationMs: 0,
+      buildExitCode: null,
+      buildError: null,
+      testExitCode: null,
+      testError: null,
+      agentTimedOut: false,
+      result: "agent_failed",
+      metrics: null,
+    };
+
+    // 1. Invoke agent
+    // On the very first invocation of the run, don't resume (no session yet).
+    // On subsequent tasks/cycles, resume if we have a valid session ID.
+    const useSessionId = (cycle === 0 && isFirstTask) ? null : sessionId;
+
+    if (cycle === 0 && !isFirstTask && !sessionId) {
+      debugLog(`Starting fresh session (no session ID from previous task — likely timed out). File changes from the previous task are preserved on disk.`);
+      console.log(chalk.yellow(`  Starting fresh session (no session ID from previous task)`));
+    }
+
+    const agentResult = invokeAgent(prompt, useSessionId, toolDir);
+
+    cycleDetail.agentExitCode = agentResult.exitCode;
+    cycleDetail.agentSessionId = agentResult.sessionId;
+    cycleDetail.agentStdoutHead = head(agentResult.output, 1000);
+    cycleDetail.agentDurationMs = agentResult.durationMs;
+    cycleDetail.agentTimedOut = agentResult.timedOut;
+    cycleDetail.metrics = parseAgentMetrics(agentResult.rawStdout, agentResult.durationMs);
+
+    // Update session ID only if we got a valid one
+    if (agentResult.sessionId) {
+      sessionId = agentResult.sessionId;
+    } else if (!sessionId) {
+      debugLog(`WARNING: No session ID available after agent invocation`);
+      console.log(chalk.red(`  WARNING: No session ID — agent may have failed to start`));
+    }
+
+    // If agent errored and this is the last cycle, bail
+    if (agentResult.exitCode !== 0) {
+      const errMsg = agentResult.timedOut
+        ? `Agent timed out after ${agentResult.durationMs}ms — process was killed`
+        : `Agent exited with code ${agentResult.exitCode} in ${agentResult.durationMs}ms`;
+      debugLog(errMsg);
+      errorHistory.push(`Cycle ${cycle}: ${errMsg}`);
+
+      if (cycle === CYCLE_CAP) {
+        outcome = "failed";
+        notes = `Agent invocation failed after ${CYCLE_CAP} cycles. Last error:\n${truncateError(agentResult.output)}`;
+        cycleDetail.result = "agent_failed";
+        cycleDetails.push(cycleDetail);
+        saveCycleLog();
+        break;
+      }
+
+      // If the agent timed out with no session, bail early with a clear message
+      if (agentResult.timedOut && !sessionId) {
+        outcome = "failed";
+        notes = `Task timed out and no session could be established. File changes from the agent are preserved on disk.`;
+        cycleDetail.result = "agent_failed";
+        cycleDetails.push(cycleDetail);
+        saveCycleLog();
+        console.log(chalk.red(`  Task timed out and no session could be established`));
+        break;
+      }
+
+      // If the agent errored but we have no session, continuing will just fail again
+      if (!sessionId) {
+        outcome = "failed";
+        notes = `Agent failed on cycle ${cycle} and no session ID was established. Cannot resume.\n\nOutput:\n${truncateError(agentResult.output)}`;
+        cycleDetail.result = "agent_failed";
+        cycleDetails.push(cycleDetail);
+        saveCycleLog();
+        console.log(chalk.red(`  Agent failed with no session ID — cannot continue this task`));
+        break;
+      }
+
+      // Agent errored but we have a session — feed the error back
+      notes = `The agent command failed with exit code ${agentResult.exitCode}:\n\n${truncateError(agentResult.output)}`;
+      correctionCycles = cycle + 1;
+      cycleDetail.result = "agent_failed";
+      cycleDetails.push(cycleDetail);
+      saveCycleLog();
+      continue;
+    }
+
+    // 2. Build check
+    console.log(chalk.gray("  Running build check..."));
+    debugLog("Running build check: npm run build");
+    const buildResult = runCommand("npm", ["run", "build"], {
+      cwd: toolDir,
+      timeout: BUILD_TIMEOUT,
+    });
+    debugLog(`  Build exit code: ${buildResult.exitCode}, duration: ${buildResult.durationMs}ms`);
+
+    if (buildResult.exitCode !== 0) {
+      const rawBuildError = buildResult.stderr || buildResult.stdout;
+      const buildError = truncateError(rawBuildError);
+      debugLog(`  Build failed. Error (tail):\n${buildError}`);
+
+      cycleDetail.buildExitCode = buildResult.exitCode;
+      cycleDetail.buildError = head(rawBuildError, 2000);
+      cycleDetail.result = "build_failed";
+      cycleDetails.push(cycleDetail);
+      saveCycleLog();
+
+      notes = `The build failed with the following errors:\n\n${buildError}`;
+      errorHistory.push(`Cycle ${cycle}: Build failed`);
+      correctionCycles = cycle + 1;
+
+      if (cycle === CYCLE_CAP) {
+        outcome = "failed";
+        console.log(chalk.red(`  Build failed on final cycle`));
+        break;
+      }
+      console.log(chalk.yellow(`  Build failed, will send error to agent`));
+      continue;
+    }
+
+    cycleDetail.buildExitCode = 0;
+    console.log(chalk.green("  Build passed"));
+
+    // 3. Playwright tests (cumulative: tiers 1..current)
+    console.log(chalk.gray(`  Running Playwright tests (tiers 1-${tier})...`));
+    const testGlobs = buildTestGlobs(tier);
+    debugLog(`Running tests: npx playwright test ${testGlobs.join(" ")}`);
+    const testResult = runCommand(
+      "npx",
+      ["playwright", "test", ...testGlobs, "--config", path.join(testsDir, "playwright.config.ts")],
+      {
+        cwd: testsDir,
+        timeout: TEST_TIMEOUT,
+        env: {
+          APP_DIR: toolDir,
+          TOOL_NAME: toolName,
+          BASE_URL: "http://localhost:3000",
+        },
+      }
+    );
+    debugLog(`  Test exit code: ${testResult.exitCode}, duration: ${testResult.durationMs}ms`);
+
+    if (testResult.exitCode !== 0) {
+      const rawTestError = testResult.stdout + "\n" + testResult.stderr;
+      const testError = truncateError(rawTestError);
+      debugLog(`  Tests failed. Error (tail):\n${testError}`);
+
+      cycleDetail.testExitCode = testResult.exitCode;
+      cycleDetail.testError = head(rawTestError, 2000);
+      cycleDetail.result = "tests_failed";
+      cycleDetails.push(cycleDetail);
+      saveCycleLog();
+
+      notes = `The automated verification tests failed:\n\n${testError}`;
+      errorHistory.push(`Cycle ${cycle}: Tests failed`);
+      correctionCycles = cycle + 1;
+
+      if (cycle === CYCLE_CAP) {
+        // Check if some tests passed (partial)
+        const passedMatch = testError.match(/(\d+) passed/);
+        const failedMatch = testError.match(/(\d+) failed/);
+        if (passedMatch && failedMatch) {
+          outcome = "partial";
+        } else {
+          outcome = "failed";
+        }
+        console.log(chalk.red(`  Tests failed on final cycle — ${outcome}`));
+        break;
+      }
+      console.log(chalk.yellow(`  Tests failed, will send error to agent`));
+      continue;
+    }
+
+    cycleDetail.testExitCode = 0;
+    cycleDetail.result = "passed";
+    cycleDetails.push(cycleDetail);
+    saveCycleLog();
+
+    // 4. All passed!
+    console.log(chalk.green(`  All tests passed!`));
+    firstAttemptSuccess = cycle === 0;
+    correctionCycles = cycle;
+    outcome = "working";
+    notes = "";
+    break;
+  }
+
+  // Build a summary notes string that includes error history for debugging
+  const finalNotes = outcome === "working"
+    ? ""
+    : `${notes}\n\n--- Error history ---\n${errorHistory.join("\n")}`;
+
+  const taskMetrics = aggregateMetrics(
+    cycleDetails.filter(c => c.taskId === task.id).map(c => c.metrics)
+  );
+
+  const taskResult: TaskResult = {
+    taskId: task.id,
+    tier: task.tier,
+    prompt: resolvedPrompt,
+    firstAttemptSuccess,
+    correctionCycles,
+    hallucinationCount: 0, // automated mode default
+    hallucinationNotes: "",
+    documentationDependency: "none", // automated mode default
+    outcome,
+    notes: finalNotes.trim(),
+    timestamp: new Date().toISOString(),
+    metrics: taskMetrics,
+  };
+
+  console.log(
+    chalk.bold(
+      `  Result: ${outcome === "working" ? chalk.green(outcome) : outcome === "partial" ? chalk.yellow(outcome) : chalk.red(outcome)} | ` +
+        `First attempt: ${firstAttemptSuccess ? "yes" : "no"} | Cycles: ${correctionCycles}`
+    )
+  );
+  debugLog(`Task ${task.id} complete: ${outcome}, cycles: ${correctionCycles}`);
+
+  return { taskResult, sessionId };
+}
+
+// ---------------------------------------------------------------------------
+// Orchestrator: autoRun
+// ---------------------------------------------------------------------------
+
+interface AutoRunOptions {
+  category: string;
+  tool: string;
+  root?: string;
+  force?: boolean;
+  agentVersion?: string;
+}
+
+export async function autoRun(options: AutoRunOptions): Promise<void> {
+  const { category, tool, force = false, agentVersion = "latest" } = options;
+  const root = options.root || process.cwd();
+
+  // Validate category and tool
+  const categoryDef = categories[category];
+  if (!categoryDef) {
+    console.error(chalk.red(`Unknown category: ${category}`));
+    console.error(`Available: ${Object.keys(categories).join(", ")}`);
+    process.exit(1);
+  }
+  if (!categoryDef.tools.includes(tool)) {
+    console.error(chalk.red(`Unknown tool: ${tool}`));
+    console.error(`Available for ${category}: ${categoryDef.tools.join(", ")}`);
+    process.exit(1);
+  }
+
+  const toolDir = path.resolve(root, "runs", category, tool);
+  const starterDir = path.resolve(root, "starter-app");
+  const testsDir = path.resolve(root, "cli", "tests");
+  const tasks = categoryDef.tasks;
+
+  // Human-readable display name for the tool (e.g., "clerk" → "Clerk")
+  const toolDisplayName = tool.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+
+  console.log(chalk.bold(`\nAutomated Benchmark Run`));
+  console.log(chalk.gray(`Category: ${category} | Tool: ${toolDisplayName} | Tasks: ${tasks.length}`));
+  console.log(chalk.gray(`Tool dir: ${toolDir}`));
+  console.log(chalk.gray(`Tests dir: ${testsDir}\n`));
+
+  // 1. Setup — non-interactive
+  await setupToolDir(starterDir, toolDir, force);
+
+  // Initialize debug + cycle logs
+  initDebugLog(toolDir);
+  initCycleLog(toolDir);
+  debugLog(`Auto-run started: category=${category}, tool=${tool}, tasks=${tasks.length}`);
+  debugLog(`Tool dir: ${toolDir}`);
+  debugLog(`Tests dir: ${testsDir}`);
+
+  // Verify claude CLI is available
+  try {
+    const cleanEnv = { ...process.env };
+    delete cleanEnv.CLAUDECODE;
+    const claudeVersion = execFileSync("claude", ["--version"], {
+      encoding: "utf-8",
+      timeout: 10000,
+      env: cleanEnv,
+    }).trim();
+    debugLog(`Claude CLI version: ${claudeVersion}`);
+    console.log(chalk.gray(`Claude CLI: ${claudeVersion}`));
+  } catch (err: any) {
+    console.error(chalk.red(`Cannot find 'claude' CLI on PATH. Is it installed?`));
+    debugLog(`Claude CLI check failed: ${err.message}`);
+    process.exit(1);
+  }
+
+  // 2. Install dependencies
+  console.log(chalk.blue("Installing dependencies..."));
+  const installResult = runCommand("npm", ["install"], { cwd: toolDir, timeout: BUILD_TIMEOUT });
+  if (installResult.exitCode !== 0) {
+    console.error(chalk.red("npm install failed:"));
+    console.error(installResult.stderr);
+    debugLog(`npm install failed: ${installResult.stderr}`);
+    process.exit(1);
+  }
+  console.log(chalk.green("Dependencies installed\n"));
+
+  // 3. Run tasks sequentially
+  const benchmarkRun: BenchmarkRun = {
+    tool,
+    category,
+    agent: "claude-code",
+    agentVersion,
+    protocolVersion: "0.1",
+    testMode: "integration" as const,
+    startedAt: new Date().toISOString(),
+    completedAt: "",
+    results: [],
+  };
+
+  let sessionId: string | null = null;
+
+  for (let i = 0; i < tasks.length; i++) {
+    const task = tasks[i];
+    const tier = tierNumber(task.tier);
+
+    const result = executeTask({
+      task,
+      toolDir,
+      toolName: tool,
+      toolDisplayName,
+      tier,
+      isFirstTask: i === 0,
+      sessionId,
+      testsDir,
+    });
+
+    sessionId = result.sessionId;
+    benchmarkRun.results.push(result.taskResult);
+
+    // Git commit
+    try {
+      execSync("git add -A", { cwd: toolDir, stdio: "pipe" });
+      execSync(
+        `git commit -m "benchmark: task ${task.id} (${task.tier}) — ${result.taskResult.outcome}" --allow-empty`,
+        { cwd: toolDir, stdio: "pipe" }
+      );
+      console.log(chalk.gray(`  Committed: task ${task.id} (${task.tier}) — ${result.taskResult.outcome}`));
+    } catch {
+      console.log(chalk.gray(`  No changes to commit for task ${task.id}`));
+    }
+
+    // Save intermediate log (crash recovery)
+    benchmarkRun.completedAt = new Date().toISOString();
+    const logPath = path.join(toolDir, "benchmark-log.json");
+    fs.writeFileSync(logPath, JSON.stringify(benchmarkRun, null, 2));
+    console.log(chalk.gray(`  Saved intermediate log to ${logPath}`));
+
+    // Running tally
+    const summary = calculateSummary(benchmarkRun);
+    console.log(
+      chalk.gray(
+        `  Running: ${benchmarkRun.results.length}/${tasks.length} tasks | ` +
+          `Pass: ${summary.passRate} | ` +
+          `First-attempt: ${summary.firstAttemptRate} | ` +
+          `Band: ${summary.overallBand}`
+      )
+    );
+  }
+
+  // 4. Finalize
+  benchmarkRun.metrics = aggregateMetrics(benchmarkRun.results.map(r => r.metrics));
+  benchmarkRun.completedAt = new Date().toISOString();
+  const logPath = path.join(toolDir, "benchmark-log.json");
+  fs.writeFileSync(logPath, JSON.stringify(benchmarkRun, null, 2));
+
+  const summary = calculateSummary(benchmarkRun);
+
+  console.log(chalk.bold(`\n${"=".repeat(60)}`));
+  console.log(chalk.bold("Benchmark Complete"));
+  console.log(chalk.bold(`${"=".repeat(60)}\n`));
+  console.log(`  Pass rate:         ${summary.passRate}`);
+  console.log(`  First-attempt rate: ${summary.firstAttemptRate}`);
+  console.log(`  Avg cycles:        ${summary.avgCorrectionCycles.toFixed(1)}`);
+  console.log(`  Hallucinations:    ${summary.totalHallucinations}`);
+  console.log(`  Overall band:      ${chalk.bold(summary.overallBand)}\n`);
+
+  debugLog(`Run complete. Pass: ${summary.passRate}, Band: ${summary.overallBand}`);
+  debugLog(`Debug log: ${debugLogPath}`);
+  debugLog(`Cycle log: ${cycleLogPath}`);
+
+  // Generate scorecard
+  const scorecardDir = path.resolve(root, "runs", category);
+  const scorecardContent = generateScorecard(category, [benchmarkRun]);
+  const scorecardPath = path.join(scorecardDir, "SCORECARD.md");
+  fs.writeFileSync(scorecardPath, scorecardContent);
+  console.log(chalk.green(`Scorecard written to ${scorecardPath}`));
+  console.log(chalk.gray(`Debug log: ${debugLogPath}`));
+  console.log(chalk.gray(`Cycle log: ${cycleLogPath}`));
+}
+
+// ---------------------------------------------------------------------------
+// Backfill: extract metrics from existing cycle logs
+// ---------------------------------------------------------------------------
+
+function extractMetricFromHead(stdout: string, wallTimeMs: number): AgentMetrics | null {
+  // The agentStdoutHead is a truncated JSON string — extract fields via regex
+  const num = (pattern: RegExp): number => {
+    const m = stdout.match(pattern);
+    return m ? Number(m[1]) : 0;
+  };
+
+  const durationApi = num(/"duration_api_ms"\s*:\s*(\d+)/);
+  const turns = num(/"num_turns"\s*:\s*(\d+)/);
+  const cost = num(/"total_cost_usd"\s*:\s*([\d.]+(?:e[+-]?\d+)?)/);
+  const inputTokens = num(/"input_tokens"\s*:\s*(\d+)/);
+  const outputTokens = num(/"output_tokens"\s*:\s*(\d+)/);
+  const cacheCreation = num(/"cache_creation_input_tokens"\s*:\s*(\d+)/);
+  const cacheRead = num(/"cache_read_input_tokens"\s*:\s*(\d+)/);
+  const webSearches = num(/"web_search_requests"\s*:\s*(\d+)/);
+  const webFetches = num(/"web_fetch_requests"\s*:\s*(\d+)/);
+
+  // If we couldn't find any meaningful data, return null
+  if (turns === 0 && cost === 0 && outputTokens === 0) return null;
+
+  return {
+    durationMs: wallTimeMs,
+    apiTimeMs: durationApi,
+    turns,
+    costUsd: cost,
+    inputTokens,
+    outputTokens,
+    cacheCreationTokens: cacheCreation,
+    cacheReadTokens: cacheRead,
+    webSearches,
+    webFetches,
+  };
+}
+
+export async function backfillMetrics(options: { category: string; root?: string }): Promise<void> {
+  const root = options.root || process.cwd();
+  const categoryDir = path.resolve(root, "runs", options.category);
+
+  if (!fs.existsSync(categoryDir)) {
+    console.error(chalk.red(`Category directory not found: ${categoryDir}`));
+    process.exit(1);
+  }
+
+  const entries = fs.readdirSync(categoryDir, { withFileTypes: true });
+  const toolDirs = entries.filter(e => e.isDirectory()).map(e => e.name);
+
+  if (toolDirs.length === 0) {
+    console.error(chalk.red(`No tool directories found in ${categoryDir}`));
+    process.exit(1);
+  }
+
+  const allRuns: BenchmarkRun[] = [];
+
+  for (const tool of toolDirs) {
+    const toolDir = path.join(categoryDir, tool);
+    const cyclePath = path.join(toolDir, "benchmark-cycles.json");
+    const logPath = path.join(toolDir, "benchmark-log.json");
+
+    if (!fs.existsSync(cyclePath) || !fs.existsSync(logPath)) {
+      console.log(chalk.yellow(`Skipping ${tool} — missing cycle or log data`));
+      continue;
+    }
+
+    console.log(chalk.blue(`\nBackfilling metrics for ${tool}...`));
+
+    const cycles: CycleDetail[] = JSON.parse(fs.readFileSync(cyclePath, "utf-8"));
+    const run: BenchmarkRun = JSON.parse(fs.readFileSync(logPath, "utf-8"));
+
+    // Extract metrics from each cycle's truncated stdout
+    for (const cycle of cycles) {
+      if (!cycle.metrics) {
+        cycle.metrics = extractMetricFromHead(cycle.agentStdoutHead, cycle.agentDurationMs);
+        if (cycle.metrics) {
+          console.log(chalk.gray(`  Task ${cycle.taskId} cycle ${cycle.cycle}: ${cycle.metrics.turns} turns, $${cycle.metrics.costUsd.toFixed(2)}, ${cycle.metrics.outputTokens} output tokens`));
+        } else {
+          console.log(chalk.yellow(`  Task ${cycle.taskId} cycle ${cycle.cycle}: could not extract metrics`));
+        }
+      }
+    }
+
+    // Aggregate into task results
+    for (const result of run.results) {
+      const taskCycles = cycles.filter(c => c.taskId === result.taskId);
+      result.metrics = aggregateMetrics(taskCycles.map(c => c.metrics));
+    }
+
+    // Aggregate into run
+    run.metrics = aggregateMetrics(run.results.map(r => r.metrics));
+
+    // Write updated files
+    fs.writeFileSync(cyclePath, JSON.stringify(cycles, null, 2));
+    fs.writeFileSync(logPath, JSON.stringify(run, null, 2));
+
+    console.log(chalk.green(`  Updated ${cyclePath}`));
+    console.log(chalk.green(`  Updated ${logPath}`));
+
+    const m = run.metrics!;
+    console.log(chalk.bold(`  Totals: ${m.turns} turns · $${m.costUsd.toFixed(2)} · ${m.outputTokens} output tokens · ${Math.round(m.durationMs / 1000)}s wall time`));
+
+    allRuns.push(run);
+  }
+
+  // Regenerate scorecard
+  if (allRuns.length > 0) {
+    const { generateScorecard: genSc } = await import("./scorecard.js");
+    const scorecardContent = genSc(options.category, allRuns);
+    const scorecardPath = path.join(categoryDir, "SCORECARD.md");
+    fs.writeFileSync(scorecardPath, scorecardContent);
+    console.log(chalk.green(`\nScorecard written to ${scorecardPath}`));
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Setup helpers
+// ---------------------------------------------------------------------------
+
+async function setupToolDir(
+  starterDir: string,
+  toolDir: string,
+  force: boolean
+): Promise<void> {
+  if (fs.existsSync(toolDir)) {
+    if (!force) {
+      console.error(
+        chalk.red(
+          `Tool directory already exists: ${toolDir}\nUse --force to replace it (preserves .env)`
+        )
+      );
+      process.exit(1);
+    }
+
+    // Preserve .env if it exists
+    let envContent: string | null = null;
+    const envPath = path.join(toolDir, ".env");
+    if (fs.existsSync(envPath)) {
+      envContent = fs.readFileSync(envPath, "utf-8");
+      console.log(chalk.gray("Preserved .env file"));
+    }
+
+    // Remove existing dir
+    fs.rmSync(toolDir, { recursive: true, force: true });
+    fs.mkdirSync(toolDir, { recursive: true });
+
+    // Restore .env
+    if (envContent) {
+      fs.writeFileSync(envPath, envContent);
+    }
+  } else {
+    fs.mkdirSync(toolDir, { recursive: true });
+  }
+
+  // Copy starter app
+  console.log(chalk.blue("Copying starter app..."));
+  copyDirSync(starterDir, toolDir, [".git", "node_modules", ".next", ".env"]);
+
+  // Init git
+  execSync("git init", { cwd: toolDir, stdio: "pipe" });
+  execSync("git add -A", { cwd: toolDir, stdio: "pipe" });
+  execSync('git commit -m "baseline: starter app"', {
+    cwd: toolDir,
+    stdio: "pipe",
+  });
+
+  console.log(chalk.green("Setup complete — starter app copied and git initialized"));
+}
+
+function copyDirSync(src: string, dest: string, exclude: string[]): void {
+  const entries = fs.readdirSync(src, { withFileTypes: true });
+  for (const entry of entries) {
+    if (exclude.includes(entry.name)) continue;
+    const srcPath = path.join(src, entry.name);
+    const destPath = path.join(dest, entry.name);
+    if (entry.isDirectory()) {
+      fs.mkdirSync(destPath, { recursive: true });
+      copyDirSync(srcPath, destPath, exclude);
+    } else {
+      fs.copyFileSync(srcPath, destPath);
+    }
+  }
+}

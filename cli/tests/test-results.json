@@ -1,0 +1,700 @@
+{
+  "config": {
+    "configFile": "/Users/eric_mac_studio/dev/agent-fluency-score/cli/tests/playwright.config.ts",
+    "rootDir": "/Users/eric_mac_studio/dev/agent-fluency-score/cli/tests",
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/Users/eric_mac_studio/dev/agent-fluency-score/cli/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "setup",
+        "name": "setup",
+        "testDir": "/Users/eric_mac_studio/dev/agent-fluency-score/cli/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "/global\\.setup\\.ts/"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/Users/eric_mac_studio/dev/agent-fluency-score/cli/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "tests",
+        "name": "tests",
+        "testDir": "/Users/eric_mac_studio/dev/agent-fluency-score/cli/tests/auth",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "list",
+        null
+      ],
+      [
+        "json",
+        {
+          "outputFile": "test-results.json"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "runAgents": "none",
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.58.2",
+    "workers": 1,
+    "webServer": {
+      "command": "npm run dev",
+      "cwd": "/Users/eric_mac_studio/dev/agent-fluency-score/runs/auth/propel-auth",
+      "port": 3000,
+      "reuseExistingServer": false,
+      "timeout": 30000,
+      "env": {
+        "NoDefaultCurrentDirectoryInExePath": "1",
+        "CLAUDE_CODE_ENTRYPOINT": "cli",
+        "TERM_PROGRAM": "iTerm.app",
+        "NODE": "/opt/homebrew/Cellar/node/25.5.0/bin/node",
+        "INIT_CWD": "/Users/eric_mac_studio/dev/agent-fluency-score/cli/tests",
+        "BASE_URL": "http://localhost:3000",
+        "TERM": "xterm-256color",
+        "SHELL": "/bin/zsh",
+        "HOMEBREW_REPOSITORY": "/opt/homebrew",
+        "TMPDIR": "/var/folders/59/m9jyww814s1g4g6smjg363x80000gn/T/",
+        "npm_config_global_prefix": "/opt/homebrew",
+        "TERM_PROGRAM_VERSION": "3.6.6",
+        "COLOR": "0",
+        "TERM_SESSION_ID": "w4t0p0:0094F895-B47E-4875-8E91-E2D3E0857C34",
+        "npm_config_noproxy": "",
+        "npm_config_local_prefix": "/Users/eric_mac_studio/dev/agent-fluency-score/cli",
+        "GIT_EDITOR": "true",
+        "USER": "eric_mac_studio",
+        "COMMAND_MODE": "unix2003",
+        "npm_config_globalconfig": "/opt/homebrew/etc/npmrc",
+        "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
+        "SSH_AUTH_SOCK": "/private/tmp/com.apple.launchd.qyMKBsZkhB/Listeners",
+        "__CF_USER_TEXT_ENCODING": "0x1F5:0x0:0x0",
+        "npm_execpath": "/opt/homebrew/lib/node_modules/npm/bin/npm-cli.js",
+        "TERM_FEATURES": "T3LrMSc7UUw9Ts3BFGsSyHNoSxF",
+        "TERMINFO_DIRS": "/Applications/iTerm.app/Contents/Resources/terminfo:/usr/share/terminfo",
+        "PATH": "/Users/eric_mac_studio/dev/agent-fluency-score/cli/node_modules/.bin:/Users/eric_mac_studio/dev/agent-fluency-score/cli/tests/node_modules/.bin:/Users/eric_mac_studio/dev/agent-fluency-score/cli/node_modules/.bin:/Users/eric_mac_studio/dev/agent-fluency-score/node_modules/.bin:/Users/eric_mac_studio/dev/node_modules/.bin:/Users/eric_mac_studio/node_modules/.bin:/Users/node_modules/.bin:/node_modules/.bin:/opt/homebrew/lib/node_modules/npm/node_modules/@npmcli/run-script/lib/node-gyp-bin:/opt/homebrew/opt/libpq/bin:/Users/eric_mac_studio/google-cloud-sdk/bin:/Users/eric_mac_studio/.local/bin:/Library/Frameworks/Python.framework/Versions/3.13/bin:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/System/Cryptexes/App/usr/bin:/usr/bin:/bin:/usr/sbin:/sbin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin:/opt/pmk/env/global/bin:/opt/X11/bin:/Library/Apple/usr/bin:/Applications/iTerm.app/Contents/Resources/utilities:/Users/eric_mac_studio/.lmstudio/bin",
+        "npm_package_json": "/Users/eric_mac_studio/dev/agent-fluency-score/cli/tests/package.json",
+        "_": "/Users/eric_mac_studio/dev/agent-fluency-score/cli/node_modules/.bin/playwright",
+        "npm_config_userconfig": "/Users/eric_mac_studio/.npmrc",
+        "npm_config_init_module": "/Users/eric_mac_studio/.npm-init.js",
+        "__CFBundleIdentifier": "com.googlecode.iterm2",
+        "npm_command": "exec",
+        "APP_DIR": "/Users/eric_mac_studio/dev/agent-fluency-score/runs/auth/propel-auth",
+        "PWD": "/Users/eric_mac_studio/dev/agent-fluency-score/cli/tests",
+        "npm_lifecycle_event": "npx",
+        "EDITOR": "vi",
+        "OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE": "delta",
+        "npm_package_name": "agent-fluency-score",
+        "LANG": "en_US.UTF-8",
+        "ITERM_PROFILE": "Default",
+        "npm_config_npm_version": "11.8.0",
+        "XPC_FLAGS": "0x0",
+        "npm_config_node_gyp": "/opt/homebrew/lib/node_modules/npm/node_modules/node-gyp/bin/node-gyp.js",
+        "npm_package_version": "0.1.0",
+        "XPC_SERVICE_NAME": "0",
+        "SHLVL": "3",
+        "HOME": "/Users/eric_mac_studio",
+        "COLORFGBG": "0;15",
+        "LC_TERMINAL_VERSION": "3.6.6",
+        "HOMEBREW_PREFIX": "/opt/homebrew",
+        "ITERM_SESSION_ID": "w4t0p0:0094F895-B47E-4875-8E91-E2D3E0857C34",
+        "npm_config_cache": "/Users/eric_mac_studio/.npm",
+        "LOGNAME": "eric_mac_studio",
+        "npm_lifecycle_script": "\"playwright\"",
+        "TOOL_NAME": "propel-auth",
+        "COREPACK_ENABLE_AUTO_PIN": "0",
+        "npm_config_user_agent": "npm/11.8.0 node/v25.5.0 darwin arm64 workspaces/false",
+        "npm_package_bin_afs": "dist/index.js",
+        "INFOPATH": "/opt/homebrew/share/info:",
+        "HOMEBREW_CELLAR": "/opt/homebrew/Cellar",
+        "LC_TERMINAL": "iTerm2",
+        "DISPLAY": "/private/tmp/com.apple.launchd.9zNnTHp6Kc/org.xquartz:0",
+        "OSLogRateLimit": "64",
+        "SQLITE_EXEMPT_PATH_FROM_VNODE_GUARDS": "/Users/eric_mac_studio/Library/WebKit/Databases",
+        "npm_node_execpath": "/opt/homebrew/Cellar/node/25.5.0/bin/node",
+        "npm_config_prefix": "/opt/homebrew",
+        "COLORTERM": "truecolor",
+        "NODE_ENV": "development"
+      }
+    }
+  },
+  "suites": [
+    {
+      "title": "global.setup.ts",
+      "file": "global.setup.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "global setup",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "setup",
+              "projectName": "setup",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 0,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-03-05T21:39:07.612Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "e4eb4d1272d956fb120f-70d459d566f6f915c71b",
+          "file": "global.setup.ts",
+          "line": 8,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "title": "auth/tier1-basic-setup.spec.ts",
+      "file": "auth/tier1-basic-setup.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Tier 1 — Basic Setup",
+          "file": "auth/tier1-basic-setup.spec.ts",
+          "line": 6,
+          "column": 6,
+          "specs": [
+            {
+              "title": "home page renders without error",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "tests",
+                  "projectName": "tests",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1239,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-03-05T21:39:08.137Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "aa2932981e27a7c73e2d-bc3cd6b469828d4b882d",
+              "file": "auth/tier1-basic-setup.spec.ts",
+              "line": 14,
+              "column": 3
+            },
+            {
+              "title": "sign-up page exists and renders",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "tests",
+                  "projectName": "tests",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 351,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-03-05T21:39:09.987Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "aa2932981e27a7c73e2d-6c282432c9ad051eddad",
+              "file": "auth/tier1-basic-setup.spec.ts",
+              "line": 22,
+              "column": 3
+            },
+            {
+              "title": "sign-in page exists and renders",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "tests",
+                  "projectName": "tests",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 398,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-03-05T21:39:10.344Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "aa2932981e27a7c73e2d-a70f3c33cd345459efee",
+              "file": "auth/tier1-basic-setup.spec.ts",
+              "line": 35,
+              "column": 3
+            },
+            {
+              "title": "full sign-up flow completes successfully",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "tests",
+                  "projectName": "tests",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 7312,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-03-05T21:39:10.746Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "aa2932981e27a7c73e2d-8c0814863b11c0f65481",
+              "file": "auth/tier1-basic-setup.spec.ts",
+              "line": 47,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "auth/tier2-core-feature.spec.ts",
+      "file": "auth/tier2-core-feature.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Tier 2 — Core Feature",
+          "file": "auth/tier2-core-feature.spec.ts",
+          "line": 6,
+          "column": 6,
+          "specs": [
+            {
+              "title": "Google OAuth button is visible on sign-in page",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "tests",
+                  "projectName": "tests",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 272,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-03-05T21:39:18.066Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d65d02ec5b028a5eae52-a697d0279cf7494a902f",
+              "file": "auth/tier2-core-feature.spec.ts",
+              "line": 13,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "auth/tier3-integration.spec.ts",
+      "file": "auth/tier3-integration.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Tier 3 — Integration",
+          "file": "auth/tier3-integration.spec.ts",
+          "line": 6,
+          "column": 6,
+          "specs": [
+            {
+              "title": "unauthenticated /dashboard redirects to auth page",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "tests",
+                  "projectName": "tests",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 265,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-03-05T21:39:18.354Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "9841f12f9c2d618305c4-fa797030d8cfa9d4f55f",
+              "file": "auth/tier3-integration.spec.ts",
+              "line": 14,
+              "column": 3
+            },
+            {
+              "title": "unauthenticated /settings redirects to auth page",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "tests",
+                  "projectName": "tests",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 360,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-03-05T21:39:18.628Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "9841f12f9c2d618305c4-93b7b8ebcc09841aee1a",
+              "file": "auth/tier3-integration.spec.ts",
+              "line": 31,
+              "column": 3
+            },
+            {
+              "title": "home page is publicly accessible (no redirect)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "tests",
+                  "projectName": "tests",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 242,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-03-05T21:39:18.993Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "9841f12f9c2d618305c4-2ad7ba5dca563f90f4b8",
+              "file": "auth/tier3-integration.spec.ts",
+              "line": 46,
+              "column": 3
+            },
+            {
+              "title": "sign-in restores access to protected routes",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "tests",
+                  "projectName": "tests",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 13519,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-03-05T21:39:19.239Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "9841f12f9c2d618305c4-6996e07ad7ac14fa9ce8",
+              "file": "auth/tier3-integration.spec.ts",
+              "line": 57,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "auth/tier4-production.spec.ts",
+      "file": "auth/tier4-production.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Tier 4 — Production",
+          "file": "auth/tier4-production.spec.ts",
+          "line": 6,
+          "column": 6,
+          "specs": [
+            {
+              "title": "sign-out button exists after sign-in",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "tests",
+                  "projectName": "tests",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 13350,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-03-05T21:39:32.770Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "740964ef820c014f5561-7a07f8817c7799b4abf4",
+              "file": "auth/tier4-production.spec.ts",
+              "line": 14,
+              "column": 3
+            },
+            {
+              "title": "sign-out clears session and redirects",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "tests",
+                  "projectName": "tests",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 7099,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-03-05T21:39:46.129Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "740964ef820c014f5561-d0049d07242513e700f7",
+              "file": "auth/tier4-production.spec.ts",
+              "line": 36,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "auth/tier5-advanced.spec.ts",
+      "file": "auth/tier5-advanced.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Tier 5 — Advanced",
+          "file": "auth/tier5-advanced.spec.ts",
+          "line": 6,
+          "column": 6,
+          "specs": [
+            {
+              "title": "organization or team UI exists",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "tests",
+                  "projectName": "tests",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 13894,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-03-05T21:39:53.238Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "3dda75ed4b6d236afaf9-6387df40db34fe7a2e9d",
+              "file": "auth/tier5-advanced.spec.ts",
+              "line": 14,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-03-05T21:39:06.157Z",
+    "duration": 61019.289,
+    "expected": 13,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}
