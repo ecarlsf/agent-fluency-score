@@ -1,0 +1,1096 @@
+{
+  "tool": "prisma",
+  "category": "orm",
+  "agent": "claude-code",
+  "agentVersion": "latest",
+  "protocolVersion": "0.1",
+  "testMode": "integration",
+  "startedAt": "2026-03-11T02:35:32.069Z",
+  "completedAt": "2026-03-11T02:54:07.275Z",
+  "results": [
+    {
+      "taskId": 1,
+      "tier": "Basic Setup",
+      "prompt": "Set up Prisma in this Next.js project management app. Install the package, configure the database connection using the DATABASE_URL from .env, and define schemas/models for the existing data types in src/lib/mock-data.ts (Organization, User, Project, Task). Replace the mock data imports with real database queries. The app should build and display the same data from the database. The app also has JSON API routes under src/app/api/ that use mock data — these should also return data from the database.",
+      "firstAttemptSuccess": true,
+      "correctionCycles": 0,
+      "hallucinationCount": 0,
+      "hallucinationNotes": "",
+      "documentationDependency": "none",
+      "outcome": "working",
+      "notes": "",
+      "timestamp": "2026-03-11T02:44:15.636Z",
+      "metrics": {
+        "durationMs": 512991,
+        "apiTimeMs": 481741,
+        "turns": 82,
+        "costUsd": 2.140184,
+        "inputTokens": 56,
+        "outputTokens": 22707,
+        "cacheCreationTokens": 55873,
+        "cacheReadTokens": 2221013,
+        "webSearches": 0,
+        "webFetches": 0
+      },
+      "stopReason": "end_turn",
+      "agentSubtype": "success",
+      "agentResultText": "All done. Here's a summary of what was set up:\n\n**Packages installed:** `prisma`, `@prisma/client`, `@prisma/adapter-pg`, `pg`, `dotenv`, `tsx`\n\n**Prisma schema** (`prisma/schema.prisma`) — 4 models:\n- `Organization` (id, name, slug) → has many Users and Projects\n- `User` (id, name, email, role, organizationId) → belongs to Organization, has many Tasks\n- `Project` (id, name, description, status, organizationId) → belongs to Organization, has many Tasks\n- `Task` (id, title, description, status, priority, dueDate, createdAt, projectId, assigneeId) → belongs to Project and optional User assignee\n\n**New files created:**\n- `src/lib/prisma.ts` — PrismaClient singleton with PG adapter\n- `prisma/seed.ts` — seeds all 22 tasks, 5 projects, 5 users, 3 orgs (matching original mock data)\n- `prisma/migrations/` — initial migration\n\n**Files updated (mock-data → Prisma queries):**\n- `src/app/dashboard/page.tsx` — uses `prisma.*.count()` for stats\n- `src/app/projects/page.tsx` — uses `findMany` with `include` for org + `_count` for tasks\n- `src/app/projects/[id]/page.tsx` — uses `findUnique` + `findMany` with included assignee\n- `src/app/projects/[id]/archived/page.tsx` — uses `findUnique`\n- `src/app/projects/[id]/tasks/new/page.tsx` — uses `findUnique` + `user.findMany`\n- `src/app/api/dashboard/route.ts` — Prisma count queries\n- `src/app/api/projects/route.ts` — Prisma findMany with task count\n- `src/app/api/projects/[id]/route.ts` — Prisma findUnique + findMany\n- `src/app/api/projects/[id]/tasks/route.ts` — Prisma findMany for GET, `prisma.task.create` for POST\n\nThe app builds successfully and all data now comes from PostgreSQL at `localhost:5432/afs_orm_prisma`.",
+      "finalTestRunResults": {
+        "testsTotal": 10,
+        "testsPassed": 10,
+        "testsFailed": 0,
+        "testsSkipped": 0,
+        "testDurationMs": 1638,
+        "testResults": [
+          {
+            "name": "global setup",
+            "suiteName": "global.setup.ts",
+            "file": "global.setup.ts",
+            "tier": 0,
+            "status": "passed",
+            "durationMs": 0
+          },
+          {
+            "name": "home page returns < 500",
+            "suiteName": "Tier 1 — Basic Setup",
+            "file": "orm/tier1-basic-setup.spec.ts",
+            "tier": 1,
+            "status": "passed",
+            "durationMs": 1178
+          },
+          {
+            "name": "dashboard page returns < 500",
+            "suiteName": "Tier 1 — Basic Setup",
+            "file": "orm/tier1-basic-setup.spec.ts",
+            "tier": 1,
+            "status": "passed",
+            "durationMs": 180
+          },
+          {
+            "name": "projects page returns < 500",
+            "suiteName": "Tier 1 — Basic Setup",
+            "file": "orm/tier1-basic-setup.spec.ts",
+            "tier": 1,
+            "status": "passed",
+            "durationMs": 84
+          },
+          {
+            "name": "DB has organizations table",
+            "suiteName": "Tier 1 — Basic Setup",
+            "file": "orm/tier1-basic-setup.spec.ts",
+            "tier": 1,
+            "status": "passed",
+            "durationMs": 25
+          },
+          {
+            "name": "DB has users table",
+            "suiteName": "Tier 1 — Basic Setup",
+            "file": "orm/tier1-basic-setup.spec.ts",
+            "tier": 1,
+            "status": "passed",
+            "durationMs": 21
+          },
+          {
+            "name": "DB has projects table",
+            "suiteName": "Tier 1 — Basic Setup",
+            "file": "orm/tier1-basic-setup.spec.ts",
+            "tier": 1,
+            "status": "passed",
+            "durationMs": 16
+          },
+          {
+            "name": "DB has tasks table",
+            "suiteName": "Tier 1 — Basic Setup",
+            "file": "orm/tier1-basic-setup.spec.ts",
+            "tier": 1,
+            "status": "passed",
+            "durationMs": 27
+          },
+          {
+            "name": "DB is seeded",
+            "suiteName": "Tier 1 — Basic Setup",
+            "file": "orm/tier1-basic-setup.spec.ts",
+            "tier": 1,
+            "status": "passed",
+            "durationMs": 18
+          },
+          {
+            "name": "API projects endpoint works",
+            "suiteName": "Tier 1 — Basic Setup",
+            "file": "orm/tier1-basic-setup.spec.ts",
+            "tier": 1,
+            "status": "passed",
+            "durationMs": 89
+          }
+        ],
+        "regressions": []
+      },
+      "diffStats": {
+        "filesCreated": 81,
+        "filesModified": 11,
+        "filesDeleted": 0,
+        "linesAdded": 12806,
+        "linesRemoved": 120,
+        "packagesAdded": [
+          "@prisma/adapter-pg",
+          "@prisma/client",
+          "pg",
+          "prisma",
+          "seed",
+          "dotenv",
+          "tsx"
+        ],
+        "packagesRemoved": []
+      },
+      "noChangesNeeded": false
+    },
+    {
+      "taskId": 2,
+      "tier": "Core CRUD",
+      "prompt": "Make the create-task form at /projects/[id]/tasks/new fully functional. When submitted, it should insert a real task into the database using Prisma and redirect back to the project detail page showing the new task. Also make the dashboard stats (/dashboard) reflect real database counts. Also update the API route handlers under src/app/api/ to use real database queries instead of mock data.",
+      "firstAttemptSuccess": true,
+      "correctionCycles": 0,
+      "hallucinationCount": 0,
+      "hallucinationNotes": "",
+      "documentationDependency": "none",
+      "outcome": "working",
+      "notes": "",
+      "timestamp": "2026-03-11T02:45:11.944Z",
+      "metrics": {
+        "durationMs": 44232,
+        "apiTimeMs": 34274,
+        "turns": 9,
+        "costUsd": 0.5391090000000001,
+        "inputTokens": 6,
+        "outputTokens": 1747,
+        "cacheCreationTokens": 62228,
+        "cacheReadTokens": 212958,
+        "webSearches": 0,
+        "webFetches": 0
+      },
+      "stopReason": "end_turn",
+      "agentSubtype": "success",
+      "agentResultText": "Build succeeds. Here's what was done:\n\n**Create-task form** (`src/app/projects/[id]/tasks/new/page.tsx`): The server action now uses `prisma.task.create()` to insert a real task into the database, then calls `redirect()` to send the user back to the project detail page where the new task will appear.\n\n**Dashboard** (`/dashboard`) and **API routes** (`/api/*`) were already wired to Prisma from the previous setup — they use real `prisma.*.count()`, `findMany()`, `findUnique()`, and `task.create()` queries against PostgreSQL. No mock data remains.",
+      "finalTestRunResults": {
+        "testsTotal": 16,
+        "testsPassed": 16,
+        "testsFailed": 0,
+        "testsSkipped": 0,
+        "testDurationMs": 2113,
+        "testResults": [
+          {
+            "name": "global setup",
+            "suiteName": "global.setup.ts",
+            "file": "global.setup.ts",
+            "tier": 0,
+            "status": "passed",
+            "durationMs": 0
+          },
+          {
+            "name": "home page returns < 500",
+            "suiteName": "Tier 1 — Basic Setup",
+            "file": "orm/tier1-basic-setup.spec.ts",
+            "tier": 1,
+            "status": "passed",
+            "durationMs": 1085
+          },
+          {
+            "name": "dashboard page returns < 500",
+            "suiteName": "Tier 1 — Basic Setup",
+            "file": "orm/tier1-basic-setup.spec.ts",
+            "tier": 1,
+            "status": "passed",
+            "durationMs": 194
+          },
+          {
+            "name": "projects page returns < 500",
+            "suiteName": "Tier 1 — Basic Setup",
+            "file": "orm/tier1-basic-setup.spec.ts",
+            "tier": 1,
+            "status": "passed",
+            "durationMs": 89
+          },
+          {
+            "name": "DB has organizations table",
+            "suiteName": "Tier 1 — Basic Setup",
+            "file": "orm/tier1-basic-setup.spec.ts",
+            "tier": 1,
+            "status": "passed",
+            "durationMs": 26
+          },
+          {
+            "name": "DB has users table",
+            "suiteName": "Tier 1 — Basic Setup",
+            "file": "orm/tier1-basic-setup.spec.ts",
+            "tier": 1,
+            "status": "passed",
+            "durationMs": 20
+          },
+          {
+            "name": "DB has projects table",
+            "suiteName": "Tier 1 — Basic Setup",
+            "file": "orm/tier1-basic-setup.spec.ts",
+            "tier": 1,
+            "status": "passed",
+            "durationMs": 19
+          },
+          {
+            "name": "DB has tasks table",
+            "suiteName": "Tier 1 — Basic Setup",
+            "file": "orm/tier1-basic-setup.spec.ts",
+            "tier": 1,
+            "status": "passed",
+            "durationMs": 19
+          },
+          {
+            "name": "DB is seeded",
+            "suiteName": "Tier 1 — Basic Setup",
+            "file": "orm/tier1-basic-setup.spec.ts",
+            "tier": 1,
+            "status": "passed",
+            "durationMs": 15
+          },
+          {
+            "name": "API projects endpoint works",
+            "suiteName": "Tier 1 — Basic Setup",
+            "file": "orm/tier1-basic-setup.spec.ts",
+            "tier": 1,
+            "status": "passed",
+            "durationMs": 89
+          },
+          {
+            "name": "projects list returns data",
+            "suiteName": "Tier 2 — Core CRUD",
+            "file": "orm/tier2-core-crud.spec.ts",
+            "tier": 2,
+            "status": "passed",
+            "durationMs": 9
+          },
+          {
+            "name": "project detail returns tasks",
+            "suiteName": "Tier 2 — Core CRUD",
+            "file": "orm/tier2-core-crud.spec.ts",
+            "tier": 2,
+            "status": "passed",
+            "durationMs": 228
+          },
+          {
+            "name": "create task via API",
+            "suiteName": "Tier 2 — Core CRUD",
+            "file": "orm/tier2-core-crud.spec.ts",
+            "tier": 2,
+            "status": "passed",
+            "durationMs": 223
+          },
+          {
+            "name": "created task exists in DB",
+            "suiteName": "Tier 2 — Core CRUD",
+            "file": "orm/tier2-core-crud.spec.ts",
+            "tier": 2,
+            "status": "passed",
+            "durationMs": 34
+          },
+          {
+            "name": "created task appears in API listing",
+            "suiteName": "Tier 2 — Core CRUD",
+            "file": "orm/tier2-core-crud.spec.ts",
+            "tier": 2,
+            "status": "passed",
+            "durationMs": 16
+          },
+          {
+            "name": "dashboard returns real counts",
+            "suiteName": "Tier 2 — Core CRUD",
+            "file": "orm/tier2-core-crud.spec.ts",
+            "tier": 2,
+            "status": "passed",
+            "durationMs": 47
+          }
+        ],
+        "regressions": []
+      },
+      "diffStats": {
+        "filesCreated": 9,
+        "filesModified": 20,
+        "filesDeleted": 0,
+        "linesAdded": 1651,
+        "linesRemoved": 45,
+        "packagesAdded": [],
+        "packagesRemoved": []
+      },
+      "noChangesNeeded": false
+    },
+    {
+      "taskId": 3,
+      "tier": "Complex Queries",
+      "prompt": "Make the project detail page (/projects/[id]) support filtering by status and assignee via query parameters (?status=todo&assignee=1). Add working filter dropdowns that update the URL. Add pagination (10 tasks per page) with Next/Previous controls. Also make the GET /api/projects/[id]/tasks endpoint support the same ?status=, ?assignee=, ?page=, and ?limit= query parameters.",
+      "firstAttemptSuccess": false,
+      "correctionCycles": 1,
+      "hallucinationCount": 0,
+      "hallucinationNotes": "",
+      "documentationDependency": "none",
+      "outcome": "working",
+      "notes": "",
+      "timestamp": "2026-03-11T02:47:44.436Z",
+      "metrics": {
+        "durationMs": 128381,
+        "apiTimeMs": 108948,
+        "turns": 17,
+        "costUsd": 1.6082379999999998,
+        "inputTokens": 20,
+        "outputTokens": 5581,
+        "cacheCreationTokens": 145432,
+        "cacheReadTokens": 1119326,
+        "webSearches": 0,
+        "webFetches": 0
+      },
+      "stopReason": "end_turn",
+      "agentSubtype": "success",
+      "agentResultText": "Build passes. The fix: `GET /api/projects/[id]/tasks` now only paginates when `page` or `limit` is explicitly provided as a query parameter. Without them, it returns all tasks for the project — which is what the test expects when it creates a task then immediately fetches the full listing. The `?page=` and `?limit=` params still work when provided.",
+      "finalTestRunResults": {
+        "testsTotal": 22,
+        "testsPassed": 22,
+        "testsFailed": 0,
+        "testsSkipped": 0,
+        "testDurationMs": 2269,
+        "testResults": [
+          {
+            "name": "global setup",
+            "suiteName": "global.setup.ts",
+            "file": "global.setup.ts",
+            "tier": 0,
+            "status": "passed",
+            "durationMs": 0
+          },
+          {
+            "name": "home page returns < 500",
+            "suiteName": "Tier 1 — Basic Setup",
+            "file": "orm/tier1-basic-setup.spec.ts",
+            "tier": 1,
+            "status": "passed",
+            "durationMs": 1159
+          },
+          {
+            "name": "dashboard page returns < 500",
+            "suiteName": "Tier 1 — Basic Setup",
+            "file": "orm/tier1-basic-setup.spec.ts",
+            "tier": 1,
+            "status": "passed",
+            "durationMs": 191
+          },
+          {
+            "name": "projects page returns < 500",
+            "suiteName": "Tier 1 — Basic Setup",
+            "file": "orm/tier1-basic-setup.spec.ts",
+            "tier": 1,
+            "status": "passed",
+            "durationMs": 84
+          },
+          {
+            "name": "DB has organizations table",
+            "suiteName": "Tier 1 — Basic Setup",
+            "file": "orm/tier1-basic-setup.spec.ts",
+            "tier": 1,
+            "status": "passed",
+            "durationMs": 27
+          },
+          {
+            "name": "DB has users table",
+            "suiteName": "Tier 1 — Basic Setup",
+            "file": "orm/tier1-basic-setup.spec.ts",
+            "tier": 1,
+            "status": "passed",
+            "durationMs": 20
+          },
+          {
+            "name": "DB has projects table",
+            "suiteName": "Tier 1 — Basic Setup",
+            "file": "orm/tier1-basic-setup.spec.ts",
+            "tier": 1,
+            "status": "passed",
+            "durationMs": 18
+          },
+          {
+            "name": "DB has tasks table",
+            "suiteName": "Tier 1 — Basic Setup",
+            "file": "orm/tier1-basic-setup.spec.ts",
+            "tier": 1,
+            "status": "passed",
+            "durationMs": 23
+          },
+          {
+            "name": "DB is seeded",
+            "suiteName": "Tier 1 — Basic Setup",
+            "file": "orm/tier1-basic-setup.spec.ts",
+            "tier": 1,
+            "status": "passed",
+            "durationMs": 19
+          },
+          {
+            "name": "API projects endpoint works",
+            "suiteName": "Tier 1 — Basic Setup",
+            "file": "orm/tier1-basic-setup.spec.ts",
+            "tier": 1,
+            "status": "passed",
+            "durationMs": 91
+          },
+          {
+            "name": "projects list returns data",
+            "suiteName": "Tier 2 — Core CRUD",
+            "file": "orm/tier2-core-crud.spec.ts",
+            "tier": 2,
+            "status": "passed",
+            "durationMs": 8
+          },
+          {
+            "name": "project detail returns tasks",
+            "suiteName": "Tier 2 — Core CRUD",
+            "file": "orm/tier2-core-crud.spec.ts",
+            "tier": 2,
+            "status": "passed",
+            "durationMs": 227
+          },
+          {
+            "name": "create task via API",
+            "suiteName": "Tier 2 — Core CRUD",
+            "file": "orm/tier2-core-crud.spec.ts",
+            "tier": 2,
+            "status": "passed",
+            "durationMs": 233
+          },
+          {
+            "name": "created task exists in DB",
+            "suiteName": "Tier 2 — Core CRUD",
+            "file": "orm/tier2-core-crud.spec.ts",
+            "tier": 2,
+            "status": "passed",
+            "durationMs": 33
+          },
+          {
+            "name": "created task appears in API listing",
+            "suiteName": "Tier 2 — Core CRUD",
+            "file": "orm/tier2-core-crud.spec.ts",
+            "tier": 2,
+            "status": "passed",
+            "durationMs": 15
+          },
+          {
+            "name": "dashboard returns real counts",
+            "suiteName": "Tier 2 — Core CRUD",
+            "file": "orm/tier2-core-crud.spec.ts",
+            "tier": 2,
+            "status": "passed",
+            "durationMs": 46
+          },
+          {
+            "name": "status filter = todo",
+            "suiteName": "Tier 3 — Complex Queries",
+            "file": "orm/tier3-complex-queries.spec.ts",
+            "tier": 3,
+            "status": "passed",
+            "durationMs": 20
+          },
+          {
+            "name": "status filter = done",
+            "suiteName": "Tier 3 — Complex Queries",
+            "file": "orm/tier3-complex-queries.spec.ts",
+            "tier": 3,
+            "status": "passed",
+            "durationMs": 9
+          },
+          {
+            "name": "assignee filter",
+            "suiteName": "Tier 3 — Complex Queries",
+            "file": "orm/tier3-complex-queries.spec.ts",
+            "tier": 3,
+            "status": "passed",
+            "durationMs": 9
+          },
+          {
+            "name": "pagination limits results",
+            "suiteName": "Tier 3 — Complex Queries",
+            "file": "orm/tier3-complex-queries.spec.ts",
+            "tier": 3,
+            "status": "passed",
+            "durationMs": 10
+          },
+          {
+            "name": "pagination total count",
+            "suiteName": "Tier 3 — Complex Queries",
+            "file": "orm/tier3-complex-queries.spec.ts",
+            "tier": 3,
+            "status": "passed",
+            "durationMs": 16
+          },
+          {
+            "name": "combined filter + pagination",
+            "suiteName": "Tier 3 — Complex Queries",
+            "file": "orm/tier3-complex-queries.spec.ts",
+            "tier": 3,
+            "status": "passed",
+            "durationMs": 11
+          }
+        ],
+        "regressions": []
+      },
+      "diffStats": {
+        "filesCreated": 11,
+        "filesModified": 21,
+        "filesDeleted": 0,
+        "linesAdded": 187,
+        "linesRemoved": 52,
+        "packagesAdded": [],
+        "packagesRemoved": []
+      },
+      "noChangesNeeded": false
+    },
+    {
+      "taskId": 4,
+      "tier": "Transactions",
+      "prompt": "Add the ability to move a task from one project to another. On the project detail page, add a 'Move' control for each task that lets the user select a different project and move the task there. This must use a database transaction to ensure the task count stays consistent across both projects. Implement the POST /api/projects/[id]/tasks/[taskId]/move endpoint (currently returns 501) to perform the transactional move.",
+      "firstAttemptSuccess": true,
+      "correctionCycles": 0,
+      "hallucinationCount": 0,
+      "hallucinationNotes": "",
+      "documentationDependency": "none",
+      "outcome": "working",
+      "notes": "",
+      "timestamp": "2026-03-11T02:50:26.591Z",
+      "metrics": {
+        "durationMs": 149765,
+        "apiTimeMs": 139678,
+        "turns": 19,
+        "costUsd": 1.4404855000000005,
+        "inputTokens": 20,
+        "outputTokens": 4441,
+        "cacheCreationTokens": 87508,
+        "cacheReadTokens": 1564871,
+        "webSearches": 0,
+        "webFetches": 0
+      },
+      "stopReason": "end_turn",
+      "agentSubtype": "success",
+      "agentResultText": "Build passes. Here's a summary of the changes:\n\n**`POST /api/projects/[id]/tasks/[taskId]/move`** — `src/app/api/projects/[id]/tasks/[taskId]/move/route.ts`:\n- Accepts `{ targetProjectId }` in the request body\n- Validates the task exists in the source project and the target project exists\n- Returns 400 if target equals source, 404 if task or target not found\n- Uses `prisma.$transaction()` to atomically update the task's `projectId` and verify counts on both projects within the same transaction\n\n**`MoveTaskButton`** — `src/components/move-task-button.tsx`:\n- Client component with a two-step UI: click \"Move\" to reveal a project dropdown + Confirm/Cancel\n- Calls the move API endpoint, then refreshes the page via `router.refresh()` on success\n\n**Project detail page** — `src/app/projects/[id]/page.tsx`:\n- Added an \"Actions\" column to the task table\n- Each row has a `MoveTaskButton` with all projects passed as props\n- Fetches `allProjects` alongside existing queries via `Promise.all`",
+      "finalTestRunResults": {
+        "testsTotal": 25,
+        "testsPassed": 25,
+        "testsFailed": 0,
+        "testsSkipped": 0,
+        "testDurationMs": 2597,
+        "testResults": [
+          {
+            "name": "global setup",
+            "suiteName": "global.setup.ts",
+            "file": "global.setup.ts",
+            "tier": 0,
+            "status": "passed",
+            "durationMs": 0
+          },
+          {
+            "name": "home page returns < 500",
+            "suiteName": "Tier 1 — Basic Setup",
+            "file": "orm/tier1-basic-setup.spec.ts",
+            "tier": 1,
+            "status": "passed",
+            "durationMs": 1129
+          },
+          {
+            "name": "dashboard page returns < 500",
+            "suiteName": "Tier 1 — Basic Setup",
+            "file": "orm/tier1-basic-setup.spec.ts",
+            "tier": 1,
+            "status": "passed",
+            "durationMs": 186
+          },
+          {
+            "name": "projects page returns < 500",
+            "suiteName": "Tier 1 — Basic Setup",
+            "file": "orm/tier1-basic-setup.spec.ts",
+            "tier": 1,
+            "status": "passed",
+            "durationMs": 86
+          },
+          {
+            "name": "DB has organizations table",
+            "suiteName": "Tier 1 — Basic Setup",
+            "file": "orm/tier1-basic-setup.spec.ts",
+            "tier": 1,
+            "status": "passed",
+            "durationMs": 25
+          },
+          {
+            "name": "DB has users table",
+            "suiteName": "Tier 1 — Basic Setup",
+            "file": "orm/tier1-basic-setup.spec.ts",
+            "tier": 1,
+            "status": "passed",
+            "durationMs": 21
+          },
+          {
+            "name": "DB has projects table",
+            "suiteName": "Tier 1 — Basic Setup",
+            "file": "orm/tier1-basic-setup.spec.ts",
+            "tier": 1,
+            "status": "passed",
+            "durationMs": 19
+          },
+          {
+            "name": "DB has tasks table",
+            "suiteName": "Tier 1 — Basic Setup",
+            "file": "orm/tier1-basic-setup.spec.ts",
+            "tier": 1,
+            "status": "passed",
+            "durationMs": 21
+          },
+          {
+            "name": "DB is seeded",
+            "suiteName": "Tier 1 — Basic Setup",
+            "file": "orm/tier1-basic-setup.spec.ts",
+            "tier": 1,
+            "status": "passed",
+            "durationMs": 19
+          },
+          {
+            "name": "API projects endpoint works",
+            "suiteName": "Tier 1 — Basic Setup",
+            "file": "orm/tier1-basic-setup.spec.ts",
+            "tier": 1,
+            "status": "passed",
+            "durationMs": 82
+          },
+          {
+            "name": "projects list returns data",
+            "suiteName": "Tier 2 — Core CRUD",
+            "file": "orm/tier2-core-crud.spec.ts",
+            "tier": 2,
+            "status": "passed",
+            "durationMs": 8
+          },
+          {
+            "name": "project detail returns tasks",
+            "suiteName": "Tier 2 — Core CRUD",
+            "file": "orm/tier2-core-crud.spec.ts",
+            "tier": 2,
+            "status": "passed",
+            "durationMs": 230
+          },
+          {
+            "name": "create task via API",
+            "suiteName": "Tier 2 — Core CRUD",
+            "file": "orm/tier2-core-crud.spec.ts",
+            "tier": 2,
+            "status": "passed",
+            "durationMs": 233
+          },
+          {
+            "name": "created task exists in DB",
+            "suiteName": "Tier 2 — Core CRUD",
+            "file": "orm/tier2-core-crud.spec.ts",
+            "tier": 2,
+            "status": "passed",
+            "durationMs": 31
+          },
+          {
+            "name": "created task appears in API listing",
+            "suiteName": "Tier 2 — Core CRUD",
+            "file": "orm/tier2-core-crud.spec.ts",
+            "tier": 2,
+            "status": "passed",
+            "durationMs": 14
+          },
+          {
+            "name": "dashboard returns real counts",
+            "suiteName": "Tier 2 — Core CRUD",
+            "file": "orm/tier2-core-crud.spec.ts",
+            "tier": 2,
+            "status": "passed",
+            "durationMs": 44
+          },
+          {
+            "name": "status filter = todo",
+            "suiteName": "Tier 3 — Complex Queries",
+            "file": "orm/tier3-complex-queries.spec.ts",
+            "tier": 3,
+            "status": "passed",
+            "durationMs": 19
+          },
+          {
+            "name": "status filter = done",
+            "suiteName": "Tier 3 — Complex Queries",
+            "file": "orm/tier3-complex-queries.spec.ts",
+            "tier": 3,
+            "status": "passed",
+            "durationMs": 9
+          },
+          {
+            "name": "assignee filter",
+            "suiteName": "Tier 3 — Complex Queries",
+            "file": "orm/tier3-complex-queries.spec.ts",
+            "tier": 3,
+            "status": "passed",
+            "durationMs": 10
+          },
+          {
+            "name": "pagination limits results",
+            "suiteName": "Tier 3 — Complex Queries",
+            "file": "orm/tier3-complex-queries.spec.ts",
+            "tier": 3,
+            "status": "passed",
+            "durationMs": 9
+          },
+          {
+            "name": "pagination total count",
+            "suiteName": "Tier 3 — Complex Queries",
+            "file": "orm/tier3-complex-queries.spec.ts",
+            "tier": 3,
+            "status": "passed",
+            "durationMs": 16
+          },
+          {
+            "name": "combined filter + pagination",
+            "suiteName": "Tier 3 — Complex Queries",
+            "file": "orm/tier3-complex-queries.spec.ts",
+            "tier": 3,
+            "status": "passed",
+            "durationMs": 11
+          },
+          {
+            "name": "move endpoint implemented",
+            "suiteName": "Tier 4 — Transactions",
+            "file": "orm/tier4-transactions.spec.ts",
+            "tier": 4,
+            "status": "passed",
+            "durationMs": 255
+          },
+          {
+            "name": "move changes project_id in DB",
+            "suiteName": "Tier 4 — Transactions",
+            "file": "orm/tier4-transactions.spec.ts",
+            "tier": 4,
+            "status": "passed",
+            "durationMs": 61
+          },
+          {
+            "name": "move reflected in both API lists",
+            "suiteName": "Tier 4 — Transactions",
+            "file": "orm/tier4-transactions.spec.ts",
+            "tier": 4,
+            "status": "passed",
+            "durationMs": 59
+          }
+        ],
+        "regressions": []
+      },
+      "diffStats": {
+        "filesCreated": 7,
+        "filesModified": 24,
+        "filesDeleted": 0,
+        "linesAdded": 700,
+        "linesRemoved": 46,
+        "packagesAdded": [],
+        "packagesRemoved": []
+      },
+      "noChangesNeeded": false
+    },
+    {
+      "taskId": 5,
+      "tier": "Advanced Patterns",
+      "prompt": "Add soft-delete functionality to tasks. Instead of permanently deleting tasks, add a 'Delete' or 'Archive' button that marks them as deleted (soft delete). Archived tasks should appear at /projects/[id]/archived with a 'Restore' button. The main task list should only show non-deleted tasks. Implement the POST /api/projects/[id]/tasks/[taskId]/archive and /restore endpoints (currently return 501).",
+      "firstAttemptSuccess": true,
+      "correctionCycles": 0,
+      "hallucinationCount": 0,
+      "hallucinationNotes": "",
+      "documentationDependency": "none",
+      "outcome": "working",
+      "notes": "",
+      "timestamp": "2026-03-11T02:54:06.434Z",
+      "metrics": {
+        "durationMs": 206296,
+        "apiTimeMs": 187180,
+        "turns": 38,
+        "costUsd": 2.5239860000000007,
+        "inputTokens": 32,
+        "outputTokens": 9801,
+        "cacheCreationTokens": 108364,
+        "cacheReadTokens": 3203052,
+        "webSearches": 0,
+        "webFetches": 0
+      },
+      "stopReason": "end_turn",
+      "agentSubtype": "success",
+      "agentResultText": "Build passes. Here's a summary of all changes:\n\n**Schema** — Added `archivedAt DateTime?` to the `Task` model, migrated with `add-archived-at`.\n\n**API endpoints:**\n- `POST /api/projects/[id]/tasks/[taskId]/archive` — sets `archivedAt` to current timestamp. Returns 404 if task not in project, 400 if already archived.\n- `POST /api/projects/[id]/tasks/[taskId]/restore` — sets `archivedAt` to null. Returns 404 if task not in project, 400 if not archived.\n- `GET /api/projects/[id]/tasks` — now filters `archivedAt: null` so archived tasks are excluded from listings.\n- `GET /api/projects/[id]` — same exclusion for the project detail API.\n- `GET /api/dashboard` — all task counts exclude archived tasks.\n\n**UI components:**\n- `src/components/archive-task-button.tsx` — exports `ArchiveTaskButton` and `RestoreTaskButton` client components that call the respective API endpoints and refresh the page.\n\n**Pages:**\n- `/projects/[id]` — task query filters `archivedAt: null`, each task row has an \"Archive\" button in the Actions column alongside Move.\n- `/projects/[id]/archived` — queries tasks where `archivedAt` is not null, displays them in a table with status, priority, assignee, archived date, and a \"Restore\" button per row. Shows \"No archived tasks.\" when empty.\n- `/dashboard` — task counts exclude archived tasks.",
+      "finalTestRunResults": {
+        "testsTotal": 30,
+        "testsPassed": 30,
+        "testsFailed": 0,
+        "testsSkipped": 0,
+        "testDurationMs": 3653,
+        "testResults": [
+          {
+            "name": "global setup",
+            "suiteName": "global.setup.ts",
+            "file": "global.setup.ts",
+            "tier": 0,
+            "status": "passed",
+            "durationMs": 0
+          },
+          {
+            "name": "home page returns < 500",
+            "suiteName": "Tier 1 — Basic Setup",
+            "file": "orm/tier1-basic-setup.spec.ts",
+            "tier": 1,
+            "status": "passed",
+            "durationMs": 1194
+          },
+          {
+            "name": "dashboard page returns < 500",
+            "suiteName": "Tier 1 — Basic Setup",
+            "file": "orm/tier1-basic-setup.spec.ts",
+            "tier": 1,
+            "status": "passed",
+            "durationMs": 190
+          },
+          {
+            "name": "projects page returns < 500",
+            "suiteName": "Tier 1 — Basic Setup",
+            "file": "orm/tier1-basic-setup.spec.ts",
+            "tier": 1,
+            "status": "passed",
+            "durationMs": 83
+          },
+          {
+            "name": "DB has organizations table",
+            "suiteName": "Tier 1 — Basic Setup",
+            "file": "orm/tier1-basic-setup.spec.ts",
+            "tier": 1,
+            "status": "passed",
+            "durationMs": 24
+          },
+          {
+            "name": "DB has users table",
+            "suiteName": "Tier 1 — Basic Setup",
+            "file": "orm/tier1-basic-setup.spec.ts",
+            "tier": 1,
+            "status": "passed",
+            "durationMs": 19
+          },
+          {
+            "name": "DB has projects table",
+            "suiteName": "Tier 1 — Basic Setup",
+            "file": "orm/tier1-basic-setup.spec.ts",
+            "tier": 1,
+            "status": "passed",
+            "durationMs": 19
+          },
+          {
+            "name": "DB has tasks table",
+            "suiteName": "Tier 1 — Basic Setup",
+            "file": "orm/tier1-basic-setup.spec.ts",
+            "tier": 1,
+            "status": "passed",
+            "durationMs": 24
+          },
+          {
+            "name": "DB is seeded",
+            "suiteName": "Tier 1 — Basic Setup",
+            "file": "orm/tier1-basic-setup.spec.ts",
+            "tier": 1,
+            "status": "passed",
+            "durationMs": 16
+          },
+          {
+            "name": "API projects endpoint works",
+            "suiteName": "Tier 1 — Basic Setup",
+            "file": "orm/tier1-basic-setup.spec.ts",
+            "tier": 1,
+            "status": "passed",
+            "durationMs": 85
+          },
+          {
+            "name": "projects list returns data",
+            "suiteName": "Tier 2 — Core CRUD",
+            "file": "orm/tier2-core-crud.spec.ts",
+            "tier": 2,
+            "status": "passed",
+            "durationMs": 9
+          },
+          {
+            "name": "project detail returns tasks",
+            "suiteName": "Tier 2 — Core CRUD",
+            "file": "orm/tier2-core-crud.spec.ts",
+            "tier": 2,
+            "status": "passed",
+            "durationMs": 225
+          },
+          {
+            "name": "create task via API",
+            "suiteName": "Tier 2 — Core CRUD",
+            "file": "orm/tier2-core-crud.spec.ts",
+            "tier": 2,
+            "status": "passed",
+            "durationMs": 226
+          },
+          {
+            "name": "created task exists in DB",
+            "suiteName": "Tier 2 — Core CRUD",
+            "file": "orm/tier2-core-crud.spec.ts",
+            "tier": 2,
+            "status": "passed",
+            "durationMs": 33
+          },
+          {
+            "name": "created task appears in API listing",
+            "suiteName": "Tier 2 — Core CRUD",
+            "file": "orm/tier2-core-crud.spec.ts",
+            "tier": 2,
+            "status": "passed",
+            "durationMs": 14
+          },
+          {
+            "name": "dashboard returns real counts",
+            "suiteName": "Tier 2 — Core CRUD",
+            "file": "orm/tier2-core-crud.spec.ts",
+            "tier": 2,
+            "status": "passed",
+            "durationMs": 43
+          },
+          {
+            "name": "status filter = todo",
+            "suiteName": "Tier 3 — Complex Queries",
+            "file": "orm/tier3-complex-queries.spec.ts",
+            "tier": 3,
+            "status": "passed",
+            "durationMs": 18
+          },
+          {
+            "name": "status filter = done",
+            "suiteName": "Tier 3 — Complex Queries",
+            "file": "orm/tier3-complex-queries.spec.ts",
+            "tier": 3,
+            "status": "passed",
+            "durationMs": 9
+          },
+          {
+            "name": "assignee filter",
+            "suiteName": "Tier 3 — Complex Queries",
+            "file": "orm/tier3-complex-queries.spec.ts",
+            "tier": 3,
+            "status": "passed",
+            "durationMs": 9
+          },
+          {
+            "name": "pagination limits results",
+            "suiteName": "Tier 3 — Complex Queries",
+            "file": "orm/tier3-complex-queries.spec.ts",
+            "tier": 3,
+            "status": "passed",
+            "durationMs": 10
+          },
+          {
+            "name": "pagination total count",
+            "suiteName": "Tier 3 — Complex Queries",
+            "file": "orm/tier3-complex-queries.spec.ts",
+            "tier": 3,
+            "status": "passed",
+            "durationMs": 16
+          },
+          {
+            "name": "combined filter + pagination",
+            "suiteName": "Tier 3 — Complex Queries",
+            "file": "orm/tier3-complex-queries.spec.ts",
+            "tier": 3,
+            "status": "passed",
+            "durationMs": 10
+          },
+          {
+            "name": "move endpoint implemented",
+            "suiteName": "Tier 4 — Transactions",
+            "file": "orm/tier4-transactions.spec.ts",
+            "tier": 4,
+            "status": "passed",
+            "durationMs": 251
+          },
+          {
+            "name": "move changes project_id in DB",
+            "suiteName": "Tier 4 — Transactions",
+            "file": "orm/tier4-transactions.spec.ts",
+            "tier": 4,
+            "status": "passed",
+            "durationMs": 52
+          },
+          {
+            "name": "move reflected in both API lists",
+            "suiteName": "Tier 4 — Transactions",
+            "file": "orm/tier4-transactions.spec.ts",
+            "tier": 4,
+            "status": "passed",
+            "durationMs": 57
+          },
+          {
+            "name": "archive endpoint implemented",
+            "suiteName": "Tier 5 — Advanced Patterns",
+            "file": "orm/tier5-advanced-patterns.spec.ts",
+            "tier": 5,
+            "status": "passed",
+            "durationMs": 326
+          },
+          {
+            "name": "archived task gone from main list",
+            "suiteName": "Tier 5 — Advanced Patterns",
+            "file": "orm/tier5-advanced-patterns.spec.ts",
+            "tier": 5,
+            "status": "passed",
+            "durationMs": 21
+          },
+          {
+            "name": "soft-delete column exists in DB",
+            "suiteName": "Tier 5 — Advanced Patterns",
+            "file": "orm/tier5-advanced-patterns.spec.ts",
+            "tier": 5,
+            "status": "passed",
+            "durationMs": 22
+          },
+          {
+            "name": "restore brings task back",
+            "suiteName": "Tier 5 — Advanced Patterns",
+            "file": "orm/tier5-advanced-patterns.spec.ts",
+            "tier": 5,
+            "status": "passed",
+            "durationMs": 256
+          },
+          {
+            "name": "archived page renders",
+            "suiteName": "Tier 5 — Advanced Patterns",
+            "file": "orm/tier5-advanced-patterns.spec.ts",
+            "tier": 5,
+            "status": "passed",
+            "durationMs": 392
+          }
+        ],
+        "regressions": []
+      },
+      "diffStats": {
+        "filesCreated": 18,
+        "filesModified": 52,
+        "filesDeleted": 2,
+        "linesAdded": 2329,
+        "linesRemoved": 98,
+        "packagesAdded": [],
+        "packagesRemoved": []
+      },
+      "noChangesNeeded": false
+    }
+  ],
+  "metrics": {
+    "durationMs": 1041665,
+    "apiTimeMs": 951821,
+    "turns": 165,
+    "costUsd": 8.252002500000001,
+    "inputTokens": 134,
+    "outputTokens": 44277,
+    "cacheCreationTokens": 459405,
+    "cacheReadTokens": 8321220,
+    "webSearches": 0,
+    "webFetches": 0
+  }
+}
