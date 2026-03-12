@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 320" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">
+  <style>
+    .label { font-size: 14px; fill: #24292f; font-weight: 600; }
+    .meta { font-size: 11px; fill: #656d76; }
+    .value { font-size: 13px; fill: #24292f; font-weight: 500; font-family: 'SFMono-Regular', Consolas, monospace; }
+    .axis-label { font-size: 10px; fill: #8b949e; }
+    .title { font-size: 16px; fill: #24292f; font-weight: 600; }
+    .subtitle { font-size: 11px; fill: #656d76; }
+    .legend-text { font-size: 10px; fill: #656d76; }
+    .grid { stroke: #d0d7de; stroke-width: 0.5; stroke-dasharray: 3,3; }
+  </style>
+
+  <rect width="720" height="320" fill="#ffffff" rx="6"/>
+
+  <text x="40" y="30" class="title">ORM Benchmark — Wall Time per Run</text>
+  <text x="40" y="46" class="subtitle">5 tasks per tool · 2–3 independent runs · Claude Code + Next.js 14 · zero-coaching protocol</text>
+
+  <!-- Grid lines: x=140 to x=640, scale 0-40min, 12.5px per minute -->
+  <line x1="140" y1="70" x2="140" y2="250" class="grid"/>
+  <line x1="265" y1="70" x2="265" y2="250" class="grid"/>
+  <line x1="390" y1="70" x2="390" y2="250" class="grid"/>
+  <line x1="515" y1="70" x2="515" y2="250" class="grid"/>
+  <line x1="640" y1="70" x2="640" y2="250" class="grid"/>
+
+  <text x="140" y="268" class="axis-label" text-anchor="middle">0m</text>
+  <text x="265" y="268" class="axis-label" text-anchor="middle">10m</text>
+  <text x="390" y="268" class="axis-label" text-anchor="middle">20m</text>
+  <text x="515" y="268" class="axis-label" text-anchor="middle">30m</text>
+  <text x="640" y="268" class="axis-label" text-anchor="middle">40m</text>
+
+  <!-- Prisma: mean 14.9, runs [11.9, 15.6, 17.4] -->
+  <text x="38" y="100" class="label">Prisma</text>
+  <text x="38" y="113" class="meta">3.3/5 first-attempt</text>
+  <rect x="288.75" y="92" width="68.75" height="12" rx="3" fill="#3b82f6" opacity="0.15"/>
+  <rect x="326.25" y="89" width="2.5" height="18" rx="1" fill="#3b82f6" opacity="0.6"/>
+  <circle cx="288.75" cy="98" r="5" fill="#3b82f6" opacity="0.7" stroke="#fff" stroke-width="1.5"/>
+  <circle cx="335" cy="98" r="5" fill="#3b82f6" opacity="0.7" stroke="#fff" stroke-width="1.5"/>
+  <circle cx="357.5" cy="98" r="5" fill="#3b82f6" opacity="0.7" stroke="#fff" stroke-width="1.5"/>
+  <text x="660" y="103" class="value" fill="#3b82f6">14.9m</text>
+
+  <!-- Kysely: mean 15.6, runs [11.7, 15.1, 19.8] -->
+  <text x="38" y="145" class="label">Kysely</text>
+  <text x="38" y="158" class="meta">3.3/5 first-attempt</text>
+  <rect x="286.25" y="137" width="101.25" height="12" rx="3" fill="#a855f7" opacity="0.15"/>
+  <rect x="335" y="134" width="2.5" height="18" rx="1" fill="#a855f7" opacity="0.6"/>
+  <circle cx="286.25" cy="143" r="5" fill="#a855f7" opacity="0.7" stroke="#fff" stroke-width="1.5"/>
+  <circle cx="328.75" cy="143" r="5" fill="#a855f7" opacity="0.7" stroke="#fff" stroke-width="1.5"/>
+  <circle cx="387.5" cy="143" r="5" fill="#a855f7" opacity="0.7" stroke="#fff" stroke-width="1.5"/>
+  <text x="660" y="148" class="value" fill="#a855f7">15.6m</text>
+
+  <!-- Drizzle: mean 16.0, runs [14.5, 16.0, 17.7] -->
+  <text x="38" y="190" class="label">Drizzle</text>
+  <text x="38" y="203" class="meta">4.0/5 first-attempt</text>
+  <rect x="321.25" y="182" width="40" height="12" rx="3" fill="#22c55e" opacity="0.15"/>
+  <rect x="340" y="179" width="2.5" height="18" rx="1" fill="#22c55e" opacity="0.6"/>
+  <circle cx="321.25" cy="188" r="5" fill="#22c55e" opacity="0.7" stroke="#fff" stroke-width="1.5"/>
+  <circle cx="340" cy="188" r="5" fill="#22c55e" opacity="0.7" stroke="#fff" stroke-width="1.5"/>
+  <circle cx="361.25" cy="188" r="5" fill="#22c55e" opacity="0.7" stroke="#fff" stroke-width="1.5"/>
+  <text x="660" y="193" class="value" fill="#22c55e">16.0m</text>
+
+  <!-- TypeORM: mean 33.1, runs [31.5, 34.6] -->
+  <text x="38" y="235" class="label">TypeORM</text>
+  <text x="38" y="248" class="meta">2.5/5 · n=2</text>
+  <rect x="533.75" y="227" width="38.75" height="12" rx="3" fill="#ef4444" opacity="0.15"/>
+  <rect x="553.75" y="224" width="2.5" height="18" rx="1" fill="#ef4444" opacity="0.6"/>
+  <circle cx="533.75" cy="233" r="5" fill="#ef4444" opacity="0.7" stroke="#fff" stroke-width="1.5"/>
+  <circle cx="572.5" cy="233" r="5" fill="#ef4444" opacity="0.7" stroke="#fff" stroke-width="1.5"/>
+  <text x="660" y="238" class="value" fill="#ef4444">33.1m</text>
+
+  <!-- Legend -->
+  <circle cx="160" cy="292" r="4" fill="#656d76" opacity="0.7"/>
+  <text x="170" y="296" class="legend-text">Individual run</text>
+  <rect x="240" y="288" width="2.5" height="10" rx="1" fill="#656d76" opacity="0.6"/>
+  <text x="250" y="296" class="legend-text">Mean</text>
+  <rect x="290" y="289" width="20" height="8" rx="2" fill="#656d76" opacity="0.15"/>
+  <text x="316" y="296" class="legend-text">Range</text>
+</svg>
