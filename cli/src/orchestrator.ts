@@ -188,7 +188,8 @@ function invokeAgent(
 
 function truncateError(error: string): string {
   if (error.length <= ERROR_TAIL) return error;
-  return "..." + error.slice(-ERROR_TAIL);
+  const half = Math.floor(ERROR_TAIL / 2);
+  return error.slice(0, half) + "\n\n... [truncated] ...\n\n" + error.slice(-half);
 }
 
 function head(s: string, n: number): string {
