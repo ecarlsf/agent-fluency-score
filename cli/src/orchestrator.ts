@@ -11,7 +11,9 @@ const CYCLE_CAP = 10;
 const AGENT_TIMEOUT = 10 * 60 * 1000; // 10 minutes
 const BUILD_TIMEOUT = 2 * 60 * 1000; // 2 minutes
 const TEST_TIMEOUT = 3 * 60 * 1000; // 3 minutes
-const ERROR_TAIL = 3000; // last N chars of error output
+const ERROR_BUDGET = 3000; // total chars budget for truncated error output (weighted toward head)
+const BENCHMARK_PORT = parseInt(process.env.BENCHMARK_PORT || "3000", 10);
+const PGUSER = process.env.PGUSER || "postgres";
 
 // ---------------------------------------------------------------------------
 // Debug logger — writes verbose output to benchmark-debug.log in the toolDir
@@ -187,9 +189,11 @@ function invokeAgent(
 }
 
 function truncateError(error: string): string {
-  if (error.length <= ERROR_TAIL) return error;
-  const half = Math.floor(ERROR_TAIL / 2);
-  return error.slice(0, half) + "\n\n... [truncated] ...\n\n" + error.slice(-half);
+  if (error.length <= ERROR_BUDGET) return error;
+  // Weight toward head (2/3) since root-cause errors are usually at the top
+  const headSize = Math.floor(ERROR_BUDGET * 2 / 3);
+  const tailSize = ERROR_BUDGET - headSize;
+  return error.slice(0, headSize) + "\n\n... [truncated " + (error.length - ERROR_BUDGET) + " chars] ...\n\n" + error.slice(-tailSize);
 }
 
 function head(s: string, n: number): string {
@@ -563,7 +567,7 @@ export function executeTask(options: ExecuteTaskOptions): ExecuteTaskResult {
         env: {
           APP_DIR: toolDir,
           TOOL_NAME: toolName,
-          BASE_URL: "http://localhost:3000",
+          BASE_URL: `http://localhost:${BENCHMARK_PORT}`,
           CATEGORY: options.category || "auth",
         },
       }
@@ -638,9 +642,9 @@ export function executeTask(options: ExecuteTaskOptions): ExecuteTaskResult {
     prompt: resolvedPrompt,
     firstAttemptSuccess,
     correctionCycles,
-    hallucinationCount: 0, // automated mode default
+    hallucinationCount: null, // not measurable in automated mode
     hallucinationNotes: "",
-    documentationDependency: "none", // automated mode default
+    documentationDependency: null, // not measurable in automated mode
     outcome,
     notes: finalNotes.trim(),
     timestamp: new Date().toISOString(),
@@ -674,9 +678,40 @@ interface AutoRunOptions {
   agentVersion?: string;
 }
 
+function checkSessionIsolation(): void {
+  try {
+    // Look for other claude processes (excluding our own process tree)
+    const result = execSync("pgrep -x claude 2>/dev/null || true", {
+      encoding: "utf-8",
+      timeout: 5000,
+    }).trim();
+    const pids = result.split("\n").filter(Boolean);
+    // pgrep -x matches exact process name; warn if any claude processes exist beyond our own
+    if (pids.length > 1) {
+      console.log(chalk.yellow.bold(
+        "\n╔══════════════════════════════════════════════════════════════╗\n" +
+        "║  WARNING: Other Claude Code sessions may be active.        ║\n" +
+        "║                                                            ║\n" +
+        "║  Concurrent sessions sharing the same API account cause    ║\n" +
+        "║  contention that inflates wall time, triggers timeouts,    ║\n" +
+        "║  and corrupts cost measurements.                           ║\n" +
+        "║                                                            ║\n" +
+        "║  For reliable benchmark results, close all other Claude    ║\n" +
+        "║  Code sessions before running.                             ║\n" +
+        "╚══════════════════════════════════════════════════════════════╝\n"
+      ));
+    }
+  } catch {
+    // pgrep not available or failed — not critical
+  }
+}
+
 export async function autoRun(options: AutoRunOptions): Promise<void> {
   const { category, tool, force = false, agentVersion = "latest" } = options;
   const root = options.root || process.cwd();
+
+  // Pre-run: check for concurrent sessions
+  checkSessionIsolation();
 
   // Validate category and tool
   const categoryDef = categories[category];
@@ -714,8 +749,8 @@ export async function autoRun(options: AutoRunOptions): Promise<void> {
     const dbName = extractDbName(envContent);
     if (dbName) {
       console.log(chalk.blue(`Resetting database: ${dbName}...`));
-      runCommand("dropdb", ["--if-exists", "-U", "postgres", dbName], { timeout: 10000 });
-      const createResult = runCommand("createdb", ["-U", "postgres", dbName], { timeout: 10000 });
+      runCommand("dropdb", ["--if-exists", "-U", PGUSER, dbName], { timeout: 10000 });
+      const createResult = runCommand("createdb", ["-U", PGUSER, dbName], { timeout: 10000 });
       if (createResult.exitCode !== 0) {
         console.error(chalk.red(`Failed to create database ${dbName}: ${createResult.stderr}`));
         process.exit(1);
@@ -862,7 +897,7 @@ export async function autoRun(options: AutoRunOptions): Promise<void> {
   console.log(`  Pass rate:         ${summary.passRate}`);
   console.log(`  First-attempt rate: ${summary.firstAttemptRate}`);
   console.log(`  Avg cycles:        ${summary.avgCorrectionCycles.toFixed(1)}`);
-  console.log(`  Hallucinations:    ${summary.totalHallucinations}`);
+  console.log(`  Hallucinations:    ${summary.totalHallucinations === null ? "N/A (automated mode)" : summary.totalHallucinations}`);
   console.log(`  Overall band:      ${chalk.bold(summary.overallBand)}\n`);
 
   debugLog(`Run complete. Pass: ${summary.passRate}, Band: ${summary.overallBand}`);

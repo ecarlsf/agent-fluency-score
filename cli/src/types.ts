@@ -121,9 +121,9 @@ export interface TaskResult {
   prompt: string;
   firstAttemptSuccess: boolean;
   correctionCycles: number;
-  hallucinationCount: number;
+  hallucinationCount: number | null;
   hallucinationNotes: string;
-  documentationDependency: "none" | "likely" | "certain";
+  documentationDependency: "none" | "likely" | "certain" | null;
   outcome: "working" | "partial" | "failed";
   notes: string;
   timestamp: string;
@@ -156,7 +156,7 @@ export interface BenchmarkSummary {
   passRate: string;
   firstAttemptRate: string;
   avgCorrectionCycles: number;
-  totalHallucinations: number;
+  totalHallucinations: number | null;
   overallBand: "Fluent" | "Functional" | "Friction" | "Failure";
   metrics?: AgentMetrics;
   totalDiffStats?: DiffStats;
@@ -236,7 +236,7 @@ export interface CognitiveProfile {
   strategicReflective: {
     correctionCycles: number;
     firstAttemptRate: string;
-    hallucinations: number;
+    hallucinations: number | null;
     regressions: number;
   };
 }

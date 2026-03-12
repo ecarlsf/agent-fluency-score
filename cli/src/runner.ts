@@ -339,7 +339,7 @@ export async function run(
   console.log(chalk.white(`  Pass Rate:         ${summary.passRate}`));
   console.log(chalk.white(`  First-Attempt:     ${summary.firstAttemptRate}`));
   console.log(chalk.white(`  Avg Cycles:        ${summary.avgCorrectionCycles.toFixed(1)}`));
-  console.log(chalk.white(`  Hallucinations:    ${summary.totalHallucinations}`));
+  console.log(chalk.white(`  Hallucinations:    ${summary.totalHallucinations === null ? "N/A (automated mode)" : summary.totalHallucinations}`));
 
   const bandColor =
     summary.overallBand === "Fluent"
