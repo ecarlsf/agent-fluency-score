@@ -99,6 +99,11 @@ program
     const { countCompletedRuns } = await import("./scorecard.js");
     const totalRuns = parseInt(opts.runs, 10);
 
+    if (isNaN(totalRuns) || totalRuns < 1) {
+      console.log(chalk.red(`\n  Invalid --runs value: ${opts.runs}. Must be a positive integer.\n`));
+      process.exit(1);
+    }
+
     if (totalRuns > 1) {
       // Multi-run mode: count completed runs, execute remaining
       const toolDir = path.join(opts.root, "runs", opts.category, opts.tool);

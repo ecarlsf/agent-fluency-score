@@ -8,7 +8,7 @@ export async function getDbClient(): Promise<pg.Client> {
   const envContent = fs.readFileSync(path.resolve(appDir, ".env"), "utf-8");
   const match = envContent.match(/^DATABASE_URL=(.+)$/m);
   if (!match) throw new Error("DATABASE_URL not found in .env");
-  const client = new pg.Client({ connectionString: match[1].trim() });
+  const client = new pg.Client({ connectionString: match[1].trim().replace(/^["']|["']$/g, "") });
   await client.connect();
   return client;
 }

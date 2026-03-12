@@ -17,7 +17,7 @@ When a coding agent integrates a library, some tools work on the first try. Othe
 | Prisma | ORM | 3 | 67% (3.3/5) | 0.33 | $7.33 | 15m | Functional |
 | TypeORM | ORM | 2 | 50% (2.5/5) | 0.50 | $14.91 | 33m | Friction |
 
-**Bands:** Fluent = 80%+ first-attempt, 0–1 avg cycles · Functional = 50%+, 1–3 cycles · Friction = <50%, 3–7 cycles
+**Bands** (rough criteria, primarily driven by first-attempt rate)**:** Fluent = 80%+ first-attempt · Functional = 50–79% · Friction = <50%
 
 **Agent under test:** Claude Code (Claude Opus 4.6, high effort)
 

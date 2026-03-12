@@ -1,7 +1,7 @@
 import inquirer from "inquirer";
 import chalk from "chalk";
 import { execSync } from "child_process";
-import { existsSync, readFileSync, writeFileSync, mkdirSync, cpSync } from "fs";
+import { existsSync, readdirSync, writeFileSync, mkdirSync, cpSync } from "fs";
 import path from "path";
 import { BenchmarkRun, TaskResult, CategoryDefinition } from "./types.js";
 import { generateScorecard, calculateSummary, loadAllRuns } from "./scorecard.js";
@@ -43,9 +43,8 @@ export async function setup(
   mkdirSync(toolDir, { recursive: true });
 
   // Copy starter app (excluding .git, node_modules, .next, .env)
-  const items = execSync(`ls -A ${starterDir}`, { encoding: "utf-8" })
-    .split("\n")
-    .filter((f) => f && f !== ".git" && f !== "node_modules" && f !== ".next" && f !== ".env");
+  const items = readdirSync(starterDir)
+    .filter((f) => f !== ".git" && f !== "node_modules" && f !== ".next" && f !== ".env");
 
   for (const item of items) {
     const src = path.join(starterDir, item);
