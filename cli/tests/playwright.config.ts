@@ -26,7 +26,7 @@ export default defineConfig({
     },
     {
       name: "tests",
-      testDir: "./auth",
+      testDir: `./${process.env.CATEGORY || "auth"}`,
       dependencies: ["setup"],
     },
   ],

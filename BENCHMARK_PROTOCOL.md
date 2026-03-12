@@ -1,4 +1,4 @@
-# Agent Fluency Score — Test Protocol v0.1
+# Agent Fluency Score — Benchmark Protocol v0.1
 
 ## Purpose
 
@@ -10,9 +10,9 @@ The score answers one question for developers: **If I pick this tool, how much p
 
 ## Agent Under Test
 
-**Claude Code** (latest available version at time of test)
+**Claude Code** (Claude Opus 4.6, high effort) — the agent used for all benchmark runs in this release.
 
-Future iterations may expand to Cursor, Codex, and others. Each agent gets its own score column — scores are agent-specific, not agent-agnostic.
+Future iterations may expand to other agents (Cursor, Codex, etc.). Each agent gets its own score column — scores are agent-specific, not agent-agnostic.
 
 ---
 
@@ -198,17 +198,17 @@ Each tool gets its own PostgreSQL database (e.g., `afs_auth_clerk`). The `auto-r
 - [ ] Starter project is in clean state (Integration mode) or blank scaffold created (Cold Start mode)
 - [ ] Git initialized with clean commit
 - [ ] All tasks for this category written and reviewed
-- [ ] Claude Code is on latest version
-- [ ] New Claude Code session (no prior context from other work)
+- [ ] The agent is on its latest version
+- [ ] New agent session (no prior context from other work)
 - [ ] Screen recording or full transcript logging enabled
 
 ### During the Run
 
-- Start a fresh Claude Code session for each tool (not each task — tasks within a tool are sequential to simulate real workflow)
+- Start a fresh agent session for each tool (not each task — tasks within a tool are sequential to simulate real workflow)
 - Execute tasks in order (Tier 1 → Tier 2 → etc.)
 - After each task, verify the output by actually running the code
 - Record all metrics in real time
-- Save the complete Claude Code transcript
+- Save the complete agent transcript
 - Git commit after each task (success or failure) for later analysis
 
 ### Post-Run
@@ -221,14 +221,13 @@ Each tool gets its own PostgreSQL database (e.g., `afs_auth_clerk`). The `auto-r
 
 ---
 
-## Proof of Concept: Auth Category
+## Categories and Tasks
 
-### Tools Under Test
+### Auth Category
 
-1. **Clerk**
-2. **Propel Auth**
+**Tools tested:** Clerk, Auth0, NextAuth, PropelAuth
 
-### Tasks
+**Starter project:** Next.js 14 App Router with PostgreSQL + Prisma (User/Post models), Tailwind + shadcn/ui, routes at `/`, `/dashboard`, `/settings`.
 
 | # | Tier | Task Prompt |
 |---|---|---|
@@ -238,28 +237,30 @@ Each tool gets its own PostgreSQL database (e.g., `afs_auth_clerk`). The `auto-r
 | 4 | Production | "Add a sign-out button to the header that works across all pages. Handle session expiry gracefully." |
 | 5 | Advanced | "Add organization support so users can belong to a team and only see data for their organization." |
 
-### Starter Project
+### ORM Category
 
-Next.js 14 App Router with:
-- `/` — public landing page
-- `/dashboard` — shows list of posts (currently unprotected)
-- `/settings` — user preferences (currently unprotected)
-- PostgreSQL + Prisma with User and Post models
-- Tailwind + shadcn/ui
-- Basic CRUD for posts
+**Tools tested:** Prisma, Drizzle, Kysely, TypeORM
+
+**Starter project:** Next.js 14 App Router with mock data layer (Organization/User/Project/Task models), Tailwind + shadcn/ui, routes at `/`, `/dashboard`, `/projects`, `/projects/[id]`, plus JSON API routes.
+
+| # | Tier | Task Prompt |
+|---|---|---|
+| 1 | Basic Setup | Install the ORM, configure database connection, define schemas for existing data types, replace mock data with real queries |
+| 2 | Core CRUD | Make create-task form functional, wire dashboard stats to database, update API routes |
+| 3 | Complex Queries | Add filtering by status/assignee, pagination, and corresponding API query parameters |
+| 4 | Transactions | Add cross-project task moves with transactional integrity |
+| 5 | Advanced Patterns | Add soft-delete with archive/restore functionality |
 
 ---
 
 ## What This Protocol Does NOT Measure
 
 - Agent general intelligence or reasoning ability
-- Speed of response generation
-- Token cost (future iteration)
-- Quality of generated code beyond "does it work" (future iteration)
+- Quality of generated code beyond "does it work"
 - Performance of the implemented feature
 - Security of the implementation
 
-These may be added in future versions.
+Cost, token usage, and wall time are measured but serve as efficiency context, not primary scoring criteria.
 
 ---
 
@@ -268,12 +269,7 @@ These may be added in future versions.
 This protocol will evolve. Each benchmark run should record:
 
 - Protocol version (currently v0.1)
-- Claude Code version
+- Agent and model version
 - Date of run
 - Starter project commit hash
 - Any deviations from protocol (and why)
-
----
-
-*Agent Fluency Score — Draft Protocol v0.1*
-*Designed for proof of concept. Expect this to change after the first run.*
