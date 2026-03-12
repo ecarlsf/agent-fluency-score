@@ -1,10 +1,10 @@
 import inquirer from "inquirer";
 import chalk from "chalk";
 import { execSync } from "child_process";
-import { existsSync, readFileSync, writeFileSync, mkdirSync, cpSync } from "fs";
+import { existsSync, readdirSync, writeFileSync, mkdirSync, cpSync } from "fs";
 import path from "path";
 import { BenchmarkRun, TaskResult, CategoryDefinition } from "./types.js";
-import { generateScorecard, calculateSummary } from "./scorecard.js";
+import { generateScorecard, calculateSummary, loadAllRuns } from "./scorecard.js";
 
 const CYCLE_CAP = 10;
 
@@ -43,8 +43,7 @@ export async function setup(
   mkdirSync(toolDir, { recursive: true });
 
   // Copy starter app (excluding .git, node_modules, .next, .env)
-  const items = execSync(`ls -A ${starterDir}`, { encoding: "utf-8" })
-    .split("\n")
+  const items = readdirSync(starterDir)
     .filter((f) => f && f !== ".git" && f !== "node_modules" && f !== ".next" && f !== ".env");
 
   for (const item of items) {
@@ -363,11 +362,10 @@ export async function scorecard(category: string, runsDir: string) {
     process.exit(1);
   }
 
-  // Find all benchmark runs (multi-run aware)
-  const { loadAllRuns } = await import("./scorecard.js");
-  const allRunsMap = loadAllRuns(categoryDir);
+  // Load all runs (supports multi-run archives)
+  const allRuns = loadAllRuns(categoryDir);
 
-  if (allRunsMap.size === 0) {
+  if (allRuns.size === 0) {
     console.log(
       chalk.yellow(
         `\n  No completed benchmark runs found in ${categoryDir}\n`
@@ -376,7 +374,7 @@ export async function scorecard(category: string, runsDir: string) {
     return;
   }
 
-  const markdown = generateScorecard(category, allRunsMap);
+  const markdown = generateScorecard(category, allRuns);
   const outputPath = path.join(categoryDir, "SCORECARD.md");
   writeFileSync(outputPath, markdown);
 

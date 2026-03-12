@@ -53,7 +53,8 @@ export interface DiffStats {
 export function aggregateDiffStats(items: (DiffStats | null | undefined)[]): DiffStats {
   const result: DiffStats = {
     filesCreated: 0, filesModified: 0, filesDeleted: 0,
-    linesAdded: 0, linesRemoved: 0, packagesAdded: [], packagesRemoved: [],
+    linesAdded: 0, linesRemoved: 0,
+    packagesAdded: [], packagesRemoved: [],
   };
   for (const d of items) {
     if (!d) continue;
@@ -62,13 +63,11 @@ export function aggregateDiffStats(items: (DiffStats | null | undefined)[]): Dif
     result.filesDeleted += d.filesDeleted;
     result.linesAdded += d.linesAdded;
     result.linesRemoved += d.linesRemoved;
-    for (const p of d.packagesAdded) {
-      if (!result.packagesAdded.includes(p)) result.packagesAdded.push(p);
-    }
-    for (const p of d.packagesRemoved) {
-      if (!result.packagesRemoved.includes(p)) result.packagesRemoved.push(p);
-    }
+    result.packagesAdded.push(...d.packagesAdded);
+    result.packagesRemoved.push(...d.packagesRemoved);
   }
+  result.packagesAdded = [...new Set(result.packagesAdded)];
+  result.packagesRemoved = [...new Set(result.packagesRemoved)];
   return result;
 }
 
@@ -91,76 +90,21 @@ export interface TestRunResults {
   regressions: TestDetail[];
 }
 
-export interface CycleDetail {
-  taskId: number;
-  cycle: number;
-  promptSent: string;
-  agentExitCode: number;
-  agentSessionId: string | null;
-  agentStdoutHead: string;
-  agentStderrHead: string;
-  agentDurationMs: number;
-  buildExitCode: number | null;
-  buildError: string | null;
-  testExitCode: number | null;
-  testError: string | null;
-  agentTimedOut: boolean;
-  result: string;
-  metrics: AgentMetrics | null;
-  stopReason?: string | null;
-  agentSubtype?: string | null;
-  agentResultText?: string | null;
-  testRunResults?: TestRunResults | null;
-}
-
-export interface TaskResult {
-  taskId: number;
-  tier: string;
-  prompt: string;
-  firstAttemptSuccess: boolean;
-  correctionCycles: number;
-  hallucinationCount: number | null;
-  hallucinationNotes: string;
-  documentationDependency: "none" | "likely" | "certain" | null;
-  outcome: "working" | "partial" | "failed";
-  notes: string;
-  timestamp: string;
-  metrics?: AgentMetrics;
-  diffStats?: DiffStats;
-  noChangesNeeded?: boolean;
-  finalTestRunResults?: TestRunResults;
-  stopReason?: string | null;
-  agentSubtype?: string | null;
-  agentResultText?: string | null;
-}
-
-export interface BenchmarkRun {
-  tool: string;
-  category: string;
-  agent: string;
-  agentVersion: string;
-  protocolVersion: string;
-  testMode: "cold-start" | "integration";
-  startedAt: string;
-  completedAt?: string;
-  starterProjectCommit?: string;
-  results: TaskResult[];
-  metrics?: AgentMetrics;
-  runNumber?: number;
-}
-
+// SOLO taxonomy levels (Biggs & Collis)
 export type SoloLevel = 0 | 1 | 2 | 3 | 4;
 
 export const SOLO_LABELS: Record<SoloLevel, string> = {
-  0: "Pre-structural",
-  1: "Uni-structural",
-  2: "Multi-structural",
+  0: "Prestructural",
+  1: "Unistructural",
+  2: "Multistructural",
   3: "Relational",
   4: "Extended Abstract",
 };
 
-export type SkillType = "Reproductive" | "Mixed" | "Productive";
+// Skill type (Romiszowski)
+export type SkillType = "Reproductive" | "Productive" | "Mixed";
 
+// Cognitive profile (integrated model)
 export interface CognitiveProfile {
   informationGathering: {
     webSearches: number;
@@ -186,6 +130,64 @@ export interface CognitiveProfile {
     hallucinations: number | null;
     regressions: number;
   };
+}
+
+export interface TaskResult {
+  taskId: number;
+  tier: string;
+  prompt: string;
+  firstAttemptSuccess: boolean;
+  correctionCycles: number;
+  hallucinationCount: number | null;
+  hallucinationNotes: string;
+  documentationDependency: "none" | "likely" | "certain" | null;
+  outcome: "working" | "partial" | "failed";
+  notes: string;
+  timestamp: string;
+  metrics?: AgentMetrics;
+  stopReason?: string | null;
+  agentSubtype?: string | null;
+  agentResultText?: string | null;
+  finalTestRunResults?: TestRunResults;
+  diffStats?: DiffStats;
+  noChangesNeeded?: boolean;
+}
+
+export interface CycleDetail {
+  taskId: number;
+  cycle: number;
+  promptSent: string;
+  agentExitCode: number;
+  agentSessionId: string | null;
+  agentStdoutHead: string;
+  agentStderrHead?: string;
+  agentDurationMs: number;
+  buildExitCode: number | null;
+  buildError: string | null;
+  testExitCode: number | null;
+  testError: string | null;
+  agentTimedOut: boolean;
+  result: string;
+  metrics: AgentMetrics | null;
+  stopReason?: string | null;
+  agentSubtype?: string | null;
+  agentResultText?: string | null;
+  testRunResults?: TestRunResults | null;
+}
+
+export interface BenchmarkRun {
+  tool: string;
+  category: string;
+  agent: string;
+  agentVersion: string;
+  protocolVersion: string;
+  testMode: "cold-start" | "integration";
+  startedAt: string;
+  completedAt?: string;
+  starterProjectCommit?: string;
+  results: TaskResult[];
+  metrics?: AgentMetrics;
+  runNumber?: number;
 }
 
 export interface BenchmarkSummary {
@@ -217,12 +219,12 @@ export interface CategoryDefinition {
 }
 
 export function tierNumber(tier: string): number {
-  switch (tier) {
-    case "Basic Setup": return 1;
-    case "Core Feature": return 2;
-    case "Integration": return 3;
-    case "Production": return 4;
-    case "Advanced": return 5;
-    default: return 0;
-  }
+  const mapping: Record<string, number> = {
+    "Basic Setup": 1,
+    "Core Feature": 2,
+    "Integration": 3,
+    "Production": 4,
+    "Advanced": 5,
+  };
+  return mapping[tier] ?? 0;
 }
