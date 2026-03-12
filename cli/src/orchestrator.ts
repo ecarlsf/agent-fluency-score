@@ -2,10 +2,10 @@ import { execFileSync, execSync } from "child_process";
 import fs from "fs";
 import path from "path";
 import chalk from "chalk";
-import type { Task, TaskResult, BenchmarkRun, AgentMetrics } from "./types.js";
-import { aggregateMetrics } from "./types.js";
+import type { Task, TaskResult, BenchmarkRun, AgentMetrics, CycleDetail, DiffStats, TestRunResults, TestDetail } from "./types.js";
+import { aggregateMetrics, aggregateDiffStats, tierNumber } from "./types.js";
 import categories from "./tasks/index.js";
-import { calculateSummary, generateScorecard } from "./scorecard.js";
+import { calculateSummary, generateScorecard, loadAllRuns } from "./scorecard.js";
 
 const CYCLE_CAP = 10;
 const AGENT_TIMEOUT = 10 * 60 * 1000; // 10 minutes
@@ -37,24 +37,6 @@ function debugLog(message: string): void {
 // ---------------------------------------------------------------------------
 // Cycle-level detail log — written to benchmark-cycles.json alongside the run
 // ---------------------------------------------------------------------------
-
-interface CycleDetail {
-  taskId: number;
-  cycle: number;
-  promptSent: string;
-  agentExitCode: number;
-  agentSessionId: string | null;
-  agentStdoutHead: string;
-  agentStderrHead: string;
-  agentDurationMs: number;
-  buildExitCode: number | null;
-  buildError: string | null;
-  testExitCode: number | null;
-  testError: string | null;
-  agentTimedOut: boolean;
-  result: "agent_failed" | "build_failed" | "tests_failed" | "passed";
-  metrics: AgentMetrics | null;
-}
 
 let cycleDetails: CycleDetail[] = [];
 let cycleLogPath: string | null = null;
@@ -233,15 +215,140 @@ function parseAgentMetrics(stdout: string, wallTimeMs: number): AgentMetrics | n
   }
 }
 
-function tierNumber(tier: string): number {
-  const tierMap: Record<string, number> = {
-    "Basic Setup": 1,
-    "Core Feature": 2,
-    Integration: 3,
-    Production: 4,
-    Advanced: 5,
-  };
-  return tierMap[tier] || 1;
+function parseExpandedAgentFields(rawStdout: string): {
+  stopReason: string | null;
+  agentSubtype: string | null;
+  agentResultText: string | null;
+} {
+  try {
+    const json = JSON.parse(rawStdout);
+    const stopReason = json.stop_reason ?? null;
+    const agentSubtype = json.subtype ?? null;
+    let agentResultText: string | null = null;
+    if (typeof json.result === "string") {
+      agentResultText = json.result.length > 5000 ? json.result.slice(0, 5000) : json.result;
+    }
+    return { stopReason, agentSubtype, agentResultText };
+  } catch {
+    return { stopReason: null, agentSubtype: null, agentResultText: null };
+  }
+}
+
+function captureGitDiffStats(toolDir: string): DiffStats | null {
+  try {
+    // Check we have at least 2 commits
+    const logResult = runCommand("git", ["rev-list", "--count", "HEAD"], { cwd: toolDir, timeout: 5000 });
+    if (logResult.exitCode !== 0 || parseInt(logResult.stdout.trim(), 10) < 2) return null;
+
+    const numstat = runCommand("git", ["diff", "--numstat", "HEAD~1", "HEAD"], { cwd: toolDir, timeout: 5000 });
+    const addedFiles = runCommand("git", ["diff", "--diff-filter=A", "--name-only", "HEAD~1", "HEAD"], { cwd: toolDir, timeout: 5000 });
+    const modifiedFiles = runCommand("git", ["diff", "--diff-filter=M", "--name-only", "HEAD~1", "HEAD"], { cwd: toolDir, timeout: 5000 });
+    const deletedFiles = runCommand("git", ["diff", "--diff-filter=D", "--name-only", "HEAD~1", "HEAD"], { cwd: toolDir, timeout: 5000 });
+    const pkgDiff = runCommand("git", ["diff", "HEAD~1", "HEAD", "--", "package.json"], { cwd: toolDir, timeout: 5000 });
+
+    const filterBenchmark = (lines: string[]) => lines.filter(l => !l.startsWith("benchmark-"));
+
+    let linesAdded = 0;
+    let linesRemoved = 0;
+    for (const line of numstat.stdout.trim().split("\n")) {
+      if (!line) continue;
+      const [added, removed, file] = line.split("\t");
+      if (file && file.startsWith("benchmark-")) continue;
+      if (added !== "-") linesAdded += parseInt(added, 10) || 0;
+      if (removed !== "-") linesRemoved += parseInt(removed, 10) || 0;
+    }
+
+    const filesCreated = filterBenchmark(addedFiles.stdout.trim().split("\n").filter(Boolean)).length;
+    const filesModified = filterBenchmark(modifiedFiles.stdout.trim().split("\n").filter(Boolean)).length;
+    const filesDeleted = filterBenchmark(deletedFiles.stdout.trim().split("\n").filter(Boolean)).length;
+
+    // Parse package.json diff for added/removed dependencies
+    const packagesAdded: string[] = [];
+    const packagesRemoved: string[] = [];
+    if (pkgDiff.stdout) {
+      for (const line of pkgDiff.stdout.split("\n")) {
+        const depMatch = line.match(/^[+-]\s+"([^"]+)":\s+"[^"]+"/);
+        if (!depMatch) continue;
+        const pkg = depMatch[1];
+        if (["name", "version", "private", "scripts", "description"].includes(pkg)) continue;
+        if (line.startsWith("+")) packagesAdded.push(pkg);
+        else if (line.startsWith("-")) packagesRemoved.push(pkg);
+      }
+    }
+
+    return { filesCreated, filesModified, filesDeleted, linesAdded, linesRemoved, packagesAdded, packagesRemoved };
+  } catch {
+    return null;
+  }
+}
+
+function parsePlaywrightResults(testsDir: string, currentTier: number): TestRunResults | null {
+  const resultsFile = path.join(testsDir, "test-results.json");
+  if (!fs.existsSync(resultsFile)) return null;
+
+  try {
+    const raw = JSON.parse(fs.readFileSync(resultsFile, "utf-8"));
+    const testDetails: TestDetail[] = [];
+
+    function walkSuites(suites: any[], parentSuiteName: string): void {
+      for (const suite of suites) {
+        const suiteName = suite.title || parentSuiteName;
+        if (suite.specs) {
+          for (const spec of suite.specs) {
+            const file: string = spec.file || suite.file || "";
+            const tierMatch = file.match(/tier(\d+)/);
+            const tier = tierMatch ? parseInt(tierMatch[1], 10) : 0;
+
+            for (const test of spec.tests || []) {
+              for (const result of test.results || []) {
+                let status: TestDetail["status"] = "failed";
+                if (result.status === "passed" || result.status === "expected") status = "passed";
+                else if (result.status === "timedOut") status = "timedOut";
+                else if (result.status === "skipped") status = "skipped";
+
+                testDetails.push({
+                  name: spec.title || "",
+                  suiteName,
+                  file,
+                  tier,
+                  status,
+                  durationMs: result.duration || 0,
+                });
+              }
+            }
+          }
+        }
+        if (suite.suites) {
+          walkSuites(suite.suites, suiteName);
+        }
+      }
+    }
+
+    if (raw.suites) {
+      walkSuites(raw.suites, "");
+    }
+
+    const passed = testDetails.filter(t => t.status === "passed").length;
+    const failed = testDetails.filter(t => t.status === "failed" || t.status === "timedOut").length;
+    const skipped = testDetails.filter(t => t.status === "skipped").length;
+    const totalDuration = testDetails.reduce((s, t) => s + t.durationMs, 0);
+
+    const regressions = testDetails.filter(
+      t => t.tier > 0 && t.tier < currentTier && (t.status === "failed" || t.status === "timedOut")
+    );
+
+    return {
+      testsTotal: testDetails.length,
+      testsPassed: passed,
+      testsFailed: failed,
+      testsSkipped: skipped,
+      testDurationMs: totalDuration,
+      testResults: testDetails,
+      regressions,
+    };
+  } catch {
+    return null;
+  }
 }
 
 function buildTestGlobs(upToTier: number): string[] {
@@ -265,6 +372,7 @@ interface ExecuteTaskOptions {
   isFirstTask: boolean;
   sessionId: string | null;
   testsDir: string;
+  category: string;
 }
 
 interface ExecuteTaskResult {
@@ -343,6 +451,11 @@ export function executeTask(options: ExecuteTaskOptions): ExecuteTaskResult {
     cycleDetail.agentDurationMs = agentResult.durationMs;
     cycleDetail.agentTimedOut = agentResult.timedOut;
     cycleDetail.metrics = parseAgentMetrics(agentResult.rawStdout, agentResult.durationMs);
+
+    const expandedFields = parseExpandedAgentFields(agentResult.rawStdout);
+    cycleDetail.stopReason = expandedFields.stopReason;
+    cycleDetail.agentSubtype = expandedFields.agentSubtype;
+    cycleDetail.agentResultText = expandedFields.agentResultText;
 
     // Update session ID only if we got a valid one
     if (agentResult.sessionId) {
@@ -450,10 +563,14 @@ export function executeTask(options: ExecuteTaskOptions): ExecuteTaskResult {
           APP_DIR: toolDir,
           TOOL_NAME: toolName,
           BASE_URL: "http://localhost:3000",
+          CATEGORY: options.category || "auth",
         },
       }
     );
     debugLog(`  Test exit code: ${testResult.exitCode}, duration: ${testResult.durationMs}ms`);
+
+    // Capture Playwright JSON results regardless of pass/fail
+    cycleDetail.testRunResults = parsePlaywrightResults(testsDir, tier);
 
     if (testResult.exitCode !== 0) {
       const rawTestError = testResult.stdout + "\n" + testResult.stderr;
@@ -509,6 +626,11 @@ export function executeTask(options: ExecuteTaskOptions): ExecuteTaskResult {
     cycleDetails.filter(c => c.taskId === task.id).map(c => c.metrics)
   );
 
+  // Extract expanded fields from the final cycle
+  const taskCycles = cycleDetails.filter(c => c.taskId === task.id);
+  const finalCycle = taskCycles[taskCycles.length - 1];
+  const lastTestCycle = [...taskCycles].reverse().find(c => c.testRunResults);
+
   const taskResult: TaskResult = {
     taskId: task.id,
     tier: task.tier,
@@ -522,6 +644,10 @@ export function executeTask(options: ExecuteTaskOptions): ExecuteTaskResult {
     notes: finalNotes.trim(),
     timestamp: new Date().toISOString(),
     metrics: taskMetrics,
+    stopReason: finalCycle?.stopReason ?? null,
+    agentSubtype: finalCycle?.agentSubtype ?? null,
+    agentResultText: finalCycle?.agentResultText ?? null,
+    finalTestRunResults: lastTestCycle?.testRunResults ?? undefined,
   };
 
   console.log(
@@ -565,7 +691,7 @@ export async function autoRun(options: AutoRunOptions): Promise<void> {
   }
 
   const toolDir = path.resolve(root, "runs", category, tool);
-  const starterDir = path.resolve(root, "starter-app");
+  const starterDir = path.resolve(root, categoryDef.starterAppPath || "starter-app");
   const testsDir = path.resolve(root, "cli", "tests");
   const tasks = categoryDef.tasks;
 
@@ -578,7 +704,24 @@ export async function autoRun(options: AutoRunOptions): Promise<void> {
   console.log(chalk.gray(`Tests dir: ${testsDir}\n`));
 
   // 1. Setup — non-interactive
-  await setupToolDir(starterDir, toolDir, force);
+  await setupToolDir(starterDir, toolDir, force, tool, category);
+
+  // Reset the database to ensure a clean starting state (drop + recreate)
+  const envPath = path.join(toolDir, ".env");
+  if (fs.existsSync(envPath)) {
+    const envContent = fs.readFileSync(envPath, "utf-8");
+    const dbName = extractDbName(envContent);
+    if (dbName) {
+      console.log(chalk.blue(`Resetting database: ${dbName}...`));
+      runCommand("dropdb", ["--if-exists", "-U", "postgres", dbName], { timeout: 10000 });
+      const createResult = runCommand("createdb", ["-U", "postgres", dbName], { timeout: 10000 });
+      if (createResult.exitCode !== 0) {
+        console.error(chalk.red(`Failed to create database ${dbName}: ${createResult.stderr}`));
+        process.exit(1);
+      }
+      console.log(chalk.green(`Database ${dbName} reset`));
+    }
+  }
 
   // Initialize debug + cycle logs
   initDebugLog(toolDir);
@@ -643,21 +786,35 @@ export async function autoRun(options: AutoRunOptions): Promise<void> {
       isFirstTask: i === 0,
       sessionId,
       testsDir,
+      category,
     });
 
     sessionId = result.sessionId;
     benchmarkRun.results.push(result.taskResult);
 
     // Git commit
+    let committed = false;
     try {
       execSync("git add -A", { cwd: toolDir, stdio: "pipe" });
       execSync(
         `git commit -m "benchmark: task ${task.id} (${task.tier}) — ${result.taskResult.outcome}" --allow-empty`,
         { cwd: toolDir, stdio: "pipe" }
       );
+      committed = true;
       console.log(chalk.gray(`  Committed: task ${task.id} (${task.tier}) — ${result.taskResult.outcome}`));
     } catch {
       console.log(chalk.gray(`  No changes to commit for task ${task.id}`));
+    }
+
+    // Capture git diff stats after commit
+    if (committed) {
+      const diffStats = captureGitDiffStats(toolDir);
+      if (diffStats) {
+        result.taskResult.diffStats = diffStats;
+        result.taskResult.noChangesNeeded =
+          diffStats.filesCreated === 0 && diffStats.filesModified === 0 && diffStats.filesDeleted === 0;
+        debugLog(`  DiffStats: +${diffStats.linesAdded}/-${diffStats.linesRemoved}, ${diffStats.filesCreated} created, ${diffStats.packagesAdded.length} pkgs added`);
+      }
     }
 
     // Save intermediate log (crash recovery)
@@ -681,8 +838,20 @@ export async function autoRun(options: AutoRunOptions): Promise<void> {
   // 4. Finalize
   benchmarkRun.metrics = aggregateMetrics(benchmarkRun.results.map(r => r.metrics));
   benchmarkRun.completedAt = new Date().toISOString();
+
+  // Auto-archive: determine run number and write both benchmark-log.json and archived copy
+  const existingRunNums = fs.readdirSync(toolDir)
+    .filter(f => /^benchmark-log-run\d+\.json$/.test(f))
+    .map(f => parseInt(f.match(/run(\d+)/)?.[1] ?? "0", 10));
+  const nextRunNum = existingRunNums.length > 0 ? Math.max(...existingRunNums) + 1 : 1;
+  benchmarkRun.runNumber = nextRunNum;
+
   const logPath = path.join(toolDir, "benchmark-log.json");
   fs.writeFileSync(logPath, JSON.stringify(benchmarkRun, null, 2));
+
+  const archivePath = path.join(toolDir, `benchmark-log-run${nextRunNum}.json`);
+  fs.copyFileSync(logPath, archivePath);
+  console.log(chalk.green(`Archived as benchmark-log-run${nextRunNum}.json`));
 
   const summary = calculateSummary(benchmarkRun);
 
@@ -699,14 +868,28 @@ export async function autoRun(options: AutoRunOptions): Promise<void> {
   debugLog(`Debug log: ${debugLogPath}`);
   debugLog(`Cycle log: ${cycleLogPath}`);
 
-  // Generate scorecard
+  // Generate scorecard — collect all runs (multi-run aware)
   const scorecardDir = path.resolve(root, "runs", category);
-  const scorecardContent = generateScorecard(category, [benchmarkRun]);
+  const allRunsMap = loadAllRuns(scorecardDir);
+  // Ensure current run is included in its tool's run list
+  const toolRuns = allRunsMap.get(tool) ?? [];
+  const existingIdx = toolRuns.findIndex(r => r.runNumber === benchmarkRun.runNumber);
+  if (existingIdx >= 0) toolRuns[existingIdx] = benchmarkRun;
+  else toolRuns.push(benchmarkRun);
+  allRunsMap.set(tool, toolRuns);
+  const scorecardContent = generateScorecard(category, allRunsMap);
   const scorecardPath = path.join(scorecardDir, "SCORECARD.md");
   fs.writeFileSync(scorecardPath, scorecardContent);
   console.log(chalk.green(`Scorecard written to ${scorecardPath}`));
   console.log(chalk.gray(`Debug log: ${debugLogPath}`));
   console.log(chalk.gray(`Cycle log: ${cycleLogPath}`));
+
+  if (category === "auth") {
+    console.log(chalk.yellow(
+      "\nNote: Test accounts created in the auth provider dashboard should be " +
+      "cleaned up manually between benchmark rounds for a pristine test environment."
+    ));
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -815,10 +998,11 @@ export async function backfillMetrics(options: { category: string; root?: string
     allRuns.push(run);
   }
 
-  // Regenerate scorecard
+  // Regenerate scorecard (multi-run aware)
   if (allRuns.length > 0) {
-    const { generateScorecard: genSc } = await import("./scorecard.js");
-    const scorecardContent = genSc(options.category, allRuns);
+    const { generateScorecard: genSc, loadAllRuns: loadRuns } = await import("./scorecard.js");
+    const allRunsMap = loadRuns(categoryDir);
+    const scorecardContent = genSc(options.category, allRunsMap);
     const scorecardPath = path.join(categoryDir, "SCORECARD.md");
     fs.writeFileSync(scorecardPath, scorecardContent);
     console.log(chalk.green(`\nScorecard written to ${scorecardPath}`));
@@ -832,7 +1016,9 @@ export async function backfillMetrics(options: { category: string; root?: string
 async function setupToolDir(
   starterDir: string,
   toolDir: string,
-  force: boolean
+  force: boolean,
+  toolName?: string,
+  category?: string
 ): Promise<void> {
   if (fs.existsSync(toolDir)) {
     if (!force) {
@@ -852,6 +1038,20 @@ async function setupToolDir(
       console.log(chalk.gray("Preserved .env file"));
     }
 
+    // Preserve archived benchmark logs (benchmark-log-run*.json)
+    const archivedLogs: { name: string; content: string }[] = [];
+    for (const f of fs.readdirSync(toolDir)) {
+      if (/^benchmark-log-run\d+\.json$/.test(f)) {
+        archivedLogs.push({
+          name: f,
+          content: fs.readFileSync(path.join(toolDir, f), "utf-8"),
+        });
+      }
+    }
+    if (archivedLogs.length > 0) {
+      console.log(chalk.gray(`Preserved ${archivedLogs.length} archived benchmark log(s)`));
+    }
+
     // Remove existing dir
     fs.rmSync(toolDir, { recursive: true, force: true });
     fs.mkdirSync(toolDir, { recursive: true });
@@ -859,6 +1059,11 @@ async function setupToolDir(
     // Restore .env
     if (envContent) {
       fs.writeFileSync(envPath, envContent);
+    }
+
+    // Restore archived benchmark logs
+    for (const log of archivedLogs) {
+      fs.writeFileSync(path.join(toolDir, log.name), log.content);
     }
   } else {
     fs.mkdirSync(toolDir, { recursive: true });
@@ -876,7 +1081,41 @@ async function setupToolDir(
     stdio: "pipe",
   });
 
+  // Copy .env from starter if no .env exists yet (fresh setup)
+  const envSrc = path.join(starterDir, ".env");
+  const envDest = path.join(toolDir, ".env");
+  if (!fs.existsSync(envDest) && fs.existsSync(envSrc)) {
+    let envContent = fs.readFileSync(envSrc, "utf-8");
+    // Replace database name with tool-specific name to avoid migration collisions
+    if (toolName) {
+      const oldDbName = extractDbName(envContent);
+      const newDbName = `afs_${category ?? "default"}_${toolName.replace(/-/g, "_")}`;
+      if (oldDbName) {
+        envContent = envContent.replace(oldDbName, newDbName);
+      }
+      fs.writeFileSync(envDest, envContent);
+      console.log(chalk.gray(`Copied .env with database: ${newDbName}`));
+    } else {
+      fs.writeFileSync(envDest, envContent);
+      console.log(chalk.gray("Copied .env"));
+    }
+  }
+
   console.log(chalk.green("Setup complete — starter app copied and git initialized"));
+}
+
+function extractDbName(envContent: string): string | null {
+  const match = envContent.match(/DATABASE_URL=["']?([^"'\s]+)["']?\s*$/m);
+  if (!match) return null;
+  try {
+    const url = new URL(match[1]);
+    // pathname is "/dbname" — strip leading slash
+    return url.pathname.replace(/^\//, "");
+  } catch {
+    // Fallback: extract last path segment before any query params
+    const pathMatch = match[1].match(/\/([^/?]+?)(?:\?.*)?$/);
+    return pathMatch?.[1] ?? null;
+  }
 }
 
 function copyDirSync(src: string, dest: string, exclude: string[]): void {
