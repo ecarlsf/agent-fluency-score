@@ -1,128 +1,128 @@
 # Agent Fluency Score
 
-Measuring how well frameworks, libraries, and tools work with AI coding agents.
+An automated benchmark measuring how much friction frameworks introduce when used with AI coding agents. Not "how good is the agent" — **how agent-friendly is the tool.**
 
-Not "how good is the agent" — but "how agent-friendly is the tool."
+## Results — ORM Category
 
-## Structure
+Each tool was tested 2–3 times with identical prompts, a fresh starter app, and a fresh agent session per run.
 
-```
-agent-fluency-score/
-├── BENCHMARK_PROTOCOL.md   ← Test methodology and rules
-├── README.md               ← You are here
-├── cli/                    ← Benchmark runner CLI
-│   ├── src/
-│   │   ├── index.ts        ← Entry point (setup, run, auto-run, scorecard, list)
-│   │   ├── runner.ts       ← Interactive benchmark runner
-│   │   ├── orchestrator.ts ← Automated benchmark runner (agent driver + orchestrator)
-│   │   ├── scorecard.ts    ← Scorecard generation
-│   │   ├── types.ts        ← Type definitions
-│   │   └── tasks/          ← Task definitions per category
-│   │       ├── index.ts
-│   │       └── auth.ts
-│   ├── tests/              ← Playwright E2E verification tests
-│   │   ├── playwright.config.ts
-│   │   ├── helpers/        ← Auth flow helpers (per-tool selectors)
-│   │   └── auth/           ← Tier 1-5 test specs
-│   ├── package.json
-│   └── tsconfig.json
-├── starter-app/            ← Baseline Next.js app (frozen before each run)
-└── runs/
-    └── auth/
-        ├── clerk/          ← Benchmark run for Clerk
-        └── propel-auth/    ← Benchmark run for Propel Auth
-```
+| Tool | Runs | Mean First-Attempt Rate | Mean Avg Cycles | Mean Wall Time | Wall Time Range |
+|------|:----:|:-----------------------:|:---------------:|:--------------:|:---------------:|
+| Drizzle | 3 | 80% (4.0/5) | 0.20 | 16.0m | 14.5–17.7m |
+| Kysely | 3 | 67% (3.3/5) | 0.27 | 15.6m | 11.7–19.8m |
+| Prisma | 3 | 67% (3.3/5) | 0.33 | 14.9m | 11.9–17.4m |
+| TypeORM | 2 | 50% (2.5/5) | 0.50 | 33.1m | 31.5–34.6m |
 
-## Setup
+![ORM Wall Time per Run](docs/orm-wall-time.svg)
 
-```bash
-cd cli
-npm install
-```
+Drizzle completed 80% of tasks on the first attempt across all three runs. TypeORM required twice the wall time and more correction cycles to reach the same outcomes. Kysely and Prisma landed in the middle with similar time profiles but meaningful run-to-run variance.
 
-## Usage
+Auth category results (Clerk, Auth0, NextAuth, PropelAuth) are in progress.
 
-### List available benchmarks
+## What It Measures
 
-```bash
-npx tsx src/index.ts list
-```
+Same prompts. Same starter app. Same verification tests. Different tools. The benchmark measures the **outcome** — friction — not the cause. Training data coverage, API design, error message clarity, and configuration complexity all contribute. We don't decompose which factor dominates; we measure the aggregate effect a developer would experience.
 
-### Set up a tool for benchmarking
-
-Copies the starter app into the tool's run directory and initializes git.
-
-```bash
-npx tsx src/index.ts setup -c auth -t clerk
-```
-
-### Run a benchmark
-
-Walks you through each task interactively — displays prompts, records metrics, auto-commits.
-
-```bash
-npx tsx src/index.ts run -c auth -t clerk
-```
-
-### Generate scorecard
-
-Creates a comparison scorecard from all completed runs in a category.
-
-```bash
-npx tsx src/index.ts scorecard -c auth
-```
-
-### Run automated benchmark (zero human intervention)
-
-Drives the agent programmatically, verifies results with Playwright E2E tests, handles error correction loops, and produces a scorecard automatically.
-
-```bash
-npx tsx src/index.ts auto-run -c auth -t clerk --force
-```
-
-Options:
-- `--force` — Replace existing tool directory (preserves `.env`)
-- `--agent-version <version>` — Agent version to record in results (default: `latest`)
+A tool scores well when the agent gets it right on the first try. A tool scores poorly when the agent burns through correction cycles, hallucinating APIs that don't exist or chasing opaque error messages.
 
 ## How It Works
 
-### Interactive mode
+The orchestrator drives a coding agent programmatically via `claude -p`, using zero-coaching prompts — natural-language instructions with no hints, no docs, no code snippets. For each task:
 
-1. Build the starter app in `starter-app/`
-2. Run `setup` for each tool you want to benchmark
-3. Open a **fresh Claude Code session** per tool
-4. Run the benchmark CLI — it gives you the exact prompt to paste
-5. Follow the protocol: paste prompt → error forwarding only → 10-cycle cap
-6. Record results when prompted — the CLI handles git commits and logging
-7. After both runs, generate the scorecard
+1. Sends the prompt to the agent
+2. Runs `npm run build` to verify compilation
+3. Runs Playwright E2E tests to verify functionality
+4. On failure: forwards the exact error back to the agent (up to 10 correction cycles)
+5. Records first-attempt success, correction cycles, wall time, and all agent metrics
 
-### Automated mode
+Each tool goes through 5 tasks of escalating complexity (Basic Setup → Core Feature → Integration → Production → Advanced). Multiple independent runs per tool capture variance.
 
-1. Configure prerequisites (see below)
-2. Run `auto-run` — the system handles everything:
-   - Copies starter app and initializes git
-   - Sends task prompts to the agent via `claude -p`
-   - Runs `npm run build` to verify compilation
-   - Runs Playwright E2E tests to verify functionality
-   - On failure: forwards errors to the agent (up to 10 correction cycles)
-   - Commits results after each task
-   - Generates final scorecard
+## Getting Started
 
-### Prerequisites for automated mode
+### Prerequisites
 
-- **Auth provider** configured in test/development mode (no email verification required)
-- **API keys** in `runs/<category>/<tool>/.env` (e.g., `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`)
-- **PostgreSQL** running and accessible (connection string in `.env`)
-- **Claude Code CLI** installed and authenticated
-- **Playwright browsers** installed: `cd cli && npx playwright install chromium`
+- Node.js 18+
+- PostgreSQL running locally
+- Claude Code CLI installed and authenticated
+- Playwright browsers installed
 
-## Current Status
+### Clone and install
 
-- [x] Protocol designed (v0.1)
-- [x] Directory structure created
-- [x] CLI built (interactive + automated modes)
-- [x] Starter app built
-- [x] Playwright E2E verification tests
-- [ ] Auth benchmark: Clerk
-- [ ] Auth benchmark: Propel Auth
-- [ ] Results published
+```bash
+git clone https://github.com/ecarlsf/agent-fluency-score.git
+cd agent-fluency-score/cli
+npm install
+npx playwright install chromium
+```
+
+### Configure
+
+```bash
+cp ../starter-app/.env.example ../starter-app/.env
+```
+
+Edit `starter-app/.env` and set your `DATABASE_URL`. For auth benchmarks, you'll also need provider API keys (Clerk, Auth0, etc.) — these go in `runs/auth/<tool>/.env` after setup.
+
+### Run a benchmark
+
+```bash
+npx tsx src/index.ts auto-run -c orm -t prisma --force --runs 3
+```
+
+### View results
+
+```bash
+npx tsx src/index.ts aggregate
+```
+
+## CLI Reference
+
+| Command | Description |
+|---------|-------------|
+| `auto-run -c <category> -t <tool>` | Run a fully automated benchmark (no human intervention) |
+| `run -c <category> -t <tool>` | Run a benchmark interactively |
+| `setup -c <category> -t <tool>` | Prepare a tool directory for benchmarking |
+| `scorecard -c <category>` | Generate comparison scorecard from completed runs |
+| `aggregate` | Generate cross-category aggregate report |
+| `list` | List available categories and tools |
+
+**Flags:** `--runs N` runs N independent benchmark runs. `--force` replaces the existing tool directory (preserves `.env`).
+
+## Categories
+
+**Auth** — Clerk, Auth0, PropelAuth, NextAuth, Supabase Auth, Firebase Auth
+Tasks: Basic Setup → OAuth → Route Protection → Session Management → Organizations
+
+**ORM** — Prisma, Drizzle, Kysely, TypeORM
+Tasks: Basic Setup → CRUD Operations → Filtering & Pagination → Transactions → Soft Deletes
+
+## Methodology
+
+Full protocol details are in [BENCHMARK_PROTOCOL.md](BENCHMARK_PROTOCOL.md). Key points:
+
+- **Fresh starter app per run** — each run starts from the same baseline commit
+- **Fresh agent session** — no memory or context carried between runs
+- **Database reset between runs** — clean state for every benchmark
+- **Identical prompts** — only the tool name is substituted
+- **Zero-coaching protocol** — no documentation, no hints, no code snippets in prompts
+- **Environmental requirement** — no concurrent agent sessions during benchmark runs
+
+## Limitations
+
+- **Single agent:** Claude Code only. Future iterations may add Cursor, Codex, and others.
+- **Single environment:** Next.js 14 App Router. Results may differ for other frameworks.
+- **Small sample sizes:** 2–3 runs per tool. Enough to show patterns, not statistically rigorous.
+- **Training data is part of what's being measured, not a confound.** A tool with better training data representation *is* more agent-friendly — that's the point.
+- **Run-to-run variance is significant.** Don't over-interpret small differences between tools with overlapping ranges.
+
+## Contributing
+
+**Add a new tool to an existing category:** Create a test helper in `cli/tests/helpers/`, add the tool name to the category's `tools` array in `cli/src/tasks/`, and run the benchmark.
+
+**Add a new category:** Create a task definition in `cli/src/tasks/`, register it in `cli/src/tasks/index.ts`, add corresponding Playwright test specs in `cli/tests/`, and build a starter app.
+
+See [open issues](https://github.com/ecarlsf/agent-fluency-score/issues) for planned work.
+
+## License
+
+[MIT](LICENSE)

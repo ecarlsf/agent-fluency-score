@@ -38,7 +38,7 @@ program
     }
 
     const runsDir = path.join(opts.root, "runs");
-    const starterDir = path.join(opts.root, "starter-app");
+    const starterDir = path.join(opts.root, category.starterAppPath || "starter-app");
 
     await setup(category, opts.tool, runsDir, starterDir);
   });
@@ -92,16 +92,51 @@ program
   .requiredOption("-t, --tool <name>", "tool to benchmark (e.g., clerk)")
   .option("--root <path>", "project root directory", defaultRoot)
   .option("--force", "replace existing tool directory (preserves .env)", false)
+  .option("--runs <number>", "number of independent runs to execute", "1")
   .option("--agent-version <version>", "agent version to record", "latest")
   .action(async (opts) => {
     const { autoRun } = await import("./orchestrator.js");
-    await autoRun({
-      category: opts.category,
-      tool: opts.tool,
-      root: opts.root,
-      force: opts.force,
-      agentVersion: opts.agentVersion,
-    });
+    const { countCompletedRuns } = await import("./scorecard.js");
+    const totalRuns = parseInt(opts.runs, 10);
+
+    if (isNaN(totalRuns) || totalRuns < 1) {
+      console.log(chalk.red(`\n  Invalid --runs value: ${opts.runs}. Must be a positive integer.\n`));
+      process.exit(1);
+    }
+
+    if (totalRuns > 1) {
+      const toolDir = path.join(opts.root, "runs", opts.category, opts.tool);
+      const completedRuns = countCompletedRuns(toolDir);
+      const remaining = Math.max(0, totalRuns - completedRuns);
+
+      if (remaining === 0) {
+        console.log(chalk.green(`All ${totalRuns} runs already completed for ${opts.tool}.`));
+        return;
+      }
+
+      console.log(chalk.blue(`${completedRuns} completed runs found. Running ${remaining} more to reach ${totalRuns}.`));
+
+      for (let i = 0; i < remaining; i++) {
+        console.log(chalk.bold(`\n${"=".repeat(60)}`));
+        console.log(chalk.bold(`Run ${completedRuns + i + 1} of ${totalRuns}`));
+        console.log(chalk.bold(`${"=".repeat(60)}\n`));
+        await autoRun({
+          category: opts.category,
+          tool: opts.tool,
+          root: opts.root,
+          force: true,
+          agentVersion: opts.agentVersion,
+        });
+      }
+    } else {
+      await autoRun({
+        category: opts.category,
+        tool: opts.tool,
+        root: opts.root,
+        force: opts.force,
+        agentVersion: opts.agentVersion,
+      });
+    }
   });
 
 program
@@ -115,6 +150,21 @@ program
       category: opts.category,
       root: opts.root,
     });
+  });
+
+program
+  .command("aggregate")
+  .description("Generate cross-category aggregate report from all runs")
+  .option("--root <path>", "project root directory", defaultRoot)
+  .action(async (opts) => {
+    const fs = await import("fs");
+    const { generateAggregateReport } = await import("./scorecard.js");
+    const runsDir = path.join(opts.root, "runs");
+    const report = generateAggregateReport(runsDir);
+    const outPath = path.join(runsDir, "AGGREGATE.md");
+    fs.writeFileSync(outPath, report);
+    console.log(report);
+    console.log(chalk.green(`Written to ${outPath}`));
   });
 
 program

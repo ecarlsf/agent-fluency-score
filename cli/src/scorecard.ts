@@ -48,6 +48,60 @@ export function loadAllRuns(categoryDir: string): Map<string, BenchmarkRun[]> {
   return result;
 }
 
+export function countCompletedRuns(toolDir: string): number {
+  if (!fs.existsSync(toolDir)) return 0;
+  let count = 0;
+  for (const f of fs.readdirSync(toolDir)) {
+    if (/^benchmark-log-run\d+\.json$/.test(f)) {
+      try {
+        const data = JSON.parse(fs.readFileSync(path.join(toolDir, f), "utf-8"));
+        if (data.completedAt) count++;
+      } catch { /* skip malformed */ }
+    }
+  }
+  return count;
+}
+
+export function generateAggregateReport(runsDir: string): string {
+  const lines: string[] = [];
+  lines.push("# Aggregate Benchmark Results\n");
+  lines.push(`> Generated: ${new Date().toISOString().slice(0, 10)}\n`);
+
+  if (!fs.existsSync(runsDir)) return lines.join("\n") + "\n";
+
+  const categories = fs.readdirSync(runsDir, { withFileTypes: true })
+    .filter(e => e.isDirectory())
+    .map(e => e.name);
+
+  lines.push("| Tool | Category | Runs | Mean First-Attempt | Mean Avg Cycles | Mean Wall Time (min) |");
+  lines.push("|------|----------|:----:|:------------------:|:---------------:|:--------------------:|");
+
+  for (const cat of categories) {
+    const categoryDir = path.join(runsDir, cat);
+    const allRunsMap = loadAllRuns(categoryDir);
+
+    for (const [toolName, runs] of allRunsMap) {
+      const totalTasks = runs[0]?.results.length ?? 5;
+      const summaries = runs.map(calculateSummary);
+
+      const meanFirstAttempt = summaries.reduce((sum, s) => {
+        const [n] = s.firstAttemptRate.split("/").map(Number);
+        return sum + n;
+      }, 0) / summaries.length;
+
+      const meanCycles = summaries.reduce((sum, s) => sum + s.avgCorrectionCycles, 0) / summaries.length;
+
+      const meanWallTimeMin = summaries.reduce((sum, s) => {
+        return sum + (s.metrics?.durationMs ?? 0) / 60000;
+      }, 0) / summaries.length;
+
+      lines.push(`| ${toolName} | ${cat} | ${runs.length} | ${meanFirstAttempt.toFixed(1)}/${totalTasks} | ${meanCycles.toFixed(2)} | ${meanWallTimeMin.toFixed(1)} |`);
+    }
+  }
+
+  return lines.join("\n") + "\n";
+}
+
 export function calculateSummary(run: BenchmarkRun): BenchmarkSummary {
   const results = run.results;
   const total = results.length;
