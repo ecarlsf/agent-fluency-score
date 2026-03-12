@@ -4,8 +4,23 @@ node_modules/
 .next/
 .env
 dist/
+
+# Test artifacts
+cli/tests/test-results.json
+cli/test-results/
+
+# Setup scripts with credentials
+cli/auth0-setup.mjs
+
+# Nested git repos in run directories
+runs/**/.git/
+
+# Run directory runtime artifacts
 runs/**/node_modules/
 runs/**/.next/
 runs/**/.env
-cli/test-results/
-cli/tests/test-results.json
+
+# ORM starter app runtime
+orm-starter-app/.env
+orm-starter-app/node_modules/
+orm-starter-app/.next/

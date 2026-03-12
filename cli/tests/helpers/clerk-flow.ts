@@ -1,5 +1,4 @@
 import { Page, expect } from "@playwright/test";
-import { setupClerkTestingToken } from "@clerk/testing/playwright";
 import type { AuthFlow } from "./auth-flow.js";
 
 export const clerkFlow: AuthFlow = {
@@ -7,7 +6,6 @@ export const clerkFlow: AuthFlow = {
   signInPath: "/sign-in",
 
   async signUp(page: Page, { email, password }: { email: string; password: string }) {
-    await setupClerkTestingToken({ page });
     await page.goto("/sign-up");
 
     // Wait for Clerk's sign-up form to render
@@ -39,24 +37,6 @@ export const clerkFlow: AuthFlow = {
       }
     }
 
-    // Handle email verification step
-    if (page.url().includes("verify")) {
-      const codeInput = page.locator('input[data-input-otp]')
-        .or(page.locator('input[autocomplete="one-time-code"]'))
-        .first();
-      await codeInput.waitFor({ state: "visible", timeout: 10000 });
-      await codeInput.click();
-      await page.keyboard.type("424242", { delay: 50 });
-
-      // Clerk may auto-verify test emails — click Continue only if still on verify page
-      const continueBtn = page.getByRole("button", { name: "Continue", exact: true })
-        .or(page.getByRole("button", { name: "Verify", exact: true }))
-        .first();
-      if (await continueBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
-        await continueBtn.click();
-      }
-    }
-
     // Wait for navigation away from sign-up (authenticated state)
     await page.waitForURL((url) => !url.pathname.includes("/sign-up") && !url.pathname.includes("/sign-in"), {
       timeout: 15000,
@@ -64,7 +44,6 @@ export const clerkFlow: AuthFlow = {
   },
 
   async signIn(page: Page, { email, password }: { email: string; password: string }) {
-    await setupClerkTestingToken({ page });
     // Navigate to sign-in; retry once on ERR_ABORTED (caused by redirect conflicts after sign-up)
     try {
       await page.goto("/sign-in");
@@ -90,30 +69,6 @@ export const clerkFlow: AuthFlow = {
 
     // Submit
     await page.getByRole("button", { name: "Continue", exact: true }).click();
-
-    // Wait for factor-two page or full navigation away from sign-in
-    // Note: URL is already /sign-in/factor-one (password step), so we must exclude that too
-    await page.waitForURL(
-      (url) => url.pathname !== "/sign-in" && url.pathname !== "/sign-in/factor-one",
-      { timeout: 15000 },
-    );
-
-    // Handle second-factor verification (email OTP) if Clerk requires it
-    if (page.url().includes("factor-two")) {
-      const codeInput = page.getByRole("textbox", { name: /verification code/i })
-        .or(page.locator('input[data-input-otp]'))
-        .or(page.locator('input[autocomplete="one-time-code"]'))
-        .first();
-      await codeInput.waitFor({ state: "visible", timeout: 10000 });
-      await codeInput.click();
-      await page.keyboard.type("424242", { delay: 50 });
-
-      // Click Continue if still visible (Clerk may auto-verify)
-      const verifyBtn = page.getByRole("button", { name: "Continue", exact: true });
-      if (await verifyBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
-        await verifyBtn.click();
-      }
-    }
 
     // Wait for navigation away from sign-in
     await page.waitForURL((url) => !url.pathname.includes("/sign-in") && !url.pathname.includes("/sign-up"), {

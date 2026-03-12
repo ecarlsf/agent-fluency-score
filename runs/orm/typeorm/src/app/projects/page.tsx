@@ -1,0 +1,73 @@
+import Link from "next/link";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from "@/components/ui/table";
+import { getProjects, getOrganizations, getTaskCountForProject } from "@/lib/mock-data";
+
+export const dynamic = "force-dynamic";
+
+function statusVariant(status: string) {
+  switch (status) {
+    case "active": return "default" as const;
+    case "planning": return "secondary" as const;
+    case "archived": return "outline" as const;
+    default: return "default" as const;
+  }
+}
+
+export default async function ProjectsPage() {
+  const [projects, organizations] = await Promise.all([
+    getProjects(),
+    getOrganizations(),
+  ]);
+
+  const projectsWithCounts = await Promise.all(
+    projects.map(async (project) => ({
+      ...project,
+      taskCount: await getTaskCountForProject(project.id),
+    }))
+  );
+
+  return (
+    <div className="space-y-6">
+      <h1 className="text-3xl font-bold">Projects</h1>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Name</TableHead>
+            <TableHead>Organization</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead className="text-right">Tasks</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {projectsWithCounts.map((project) => {
+            const org = organizations.find((o) => o.id === project.organizationId);
+            return (
+              <TableRow key={project.id}>
+                <TableCell>
+                  <Link
+                    href={`/projects/${project.id}`}
+                    className="font-medium text-primary hover:underline"
+                  >
+                    {project.name}
+                  </Link>
+                </TableCell>
+                <TableCell>{org?.name ?? "—"}</TableCell>
+                <TableCell>
+                  <Badge variant={statusVariant(project.status)}>
+                    {project.status}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-right">
+                  {project.taskCount}
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}

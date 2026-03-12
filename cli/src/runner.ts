@@ -1,10 +1,10 @@
 import inquirer from "inquirer";
 import chalk from "chalk";
 import { execSync } from "child_process";
-import { existsSync, readFileSync, readdirSync, writeFileSync, mkdirSync, cpSync } from "fs";
+import { existsSync, readdirSync, writeFileSync, mkdirSync, cpSync } from "fs";
 import path from "path";
 import { BenchmarkRun, TaskResult, CategoryDefinition } from "./types.js";
-import { generateScorecard, calculateSummary } from "./scorecard.js";
+import { generateScorecard, calculateSummary, loadAllRuns } from "./scorecard.js";
 
 const CYCLE_CAP = 10;
 
@@ -44,7 +44,7 @@ export async function setup(
 
   // Copy starter app (excluding .git, node_modules, .next, .env)
   const items = readdirSync(starterDir)
-    .filter((f) => f && f !== ".git" && f !== "node_modules" && f !== ".next" && f !== ".env");
+    .filter((f) => f !== ".git" && f !== "node_modules" && f !== ".next" && f !== ".env");
 
   for (const item of items) {
     const src = path.join(starterDir, item);
@@ -339,7 +339,7 @@ export async function run(
   console.log(chalk.white(`  Pass Rate:         ${summary.passRate}`));
   console.log(chalk.white(`  First-Attempt:     ${summary.firstAttemptRate}`));
   console.log(chalk.white(`  Avg Cycles:        ${summary.avgCorrectionCycles.toFixed(1)}`));
-  console.log(chalk.white(`  Hallucinations:    ${summary.totalHallucinations}`));
+  console.log(chalk.white(`  Hallucinations:    ${summary.totalHallucinations === null ? "N/A (automated mode)" : summary.totalHallucinations}`));
 
   const bandColor =
     summary.overallBand === "Fluent"
@@ -362,22 +362,10 @@ export async function scorecard(category: string, runsDir: string) {
     process.exit(1);
   }
 
-  // Find all benchmark-log.json files
-  const tools: BenchmarkRun[] = [];
+  // Load all runs (multi-run aware)
+  const allRunsMap = loadAllRuns(categoryDir);
 
-  const entries = readdirSync(categoryDir, { withFileTypes: true })
-    .filter((e) => e.isDirectory())
-    .map((e) => e.name);
-
-  for (const entry of entries) {
-    const logPath = path.join(categoryDir, entry, "benchmark-log.json");
-    if (existsSync(logPath)) {
-      const data = JSON.parse(readFileSync(logPath, "utf-8")) as BenchmarkRun;
-      tools.push(data);
-    }
-  }
-
-  if (tools.length === 0) {
+  if (allRunsMap.size === 0) {
     console.log(
       chalk.yellow(
         `\n  No completed benchmark runs found in ${categoryDir}\n`
@@ -386,7 +374,7 @@ export async function scorecard(category: string, runsDir: string) {
     return;
   }
 
-  const markdown = generateScorecard(category, tools);
+  const markdown = generateScorecard(category, allRunsMap);
   const outputPath = path.join(categoryDir, "SCORECARD.md");
   writeFileSync(outputPath, markdown);
 

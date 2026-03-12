@@ -105,6 +105,7 @@ program
     }
 
     if (totalRuns > 1) {
+      // Multi-run mode: count completed runs, execute remaining
       const toolDir = path.join(opts.root, "runs", opts.category, opts.tool);
       const completedRuns = countCompletedRuns(toolDir);
       const remaining = Math.max(0, totalRuns - completedRuns);
@@ -129,6 +130,7 @@ program
         });
       }
     } else {
+      // Single-run mode (original behavior)
       await autoRun({
         category: opts.category,
         tool: opts.tool,

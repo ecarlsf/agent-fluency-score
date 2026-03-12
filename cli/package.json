@@ -18,10 +18,11 @@
     "inquirer": "^9.2.0"
   },
   "devDependencies": {
-    "@clerk/testing": "^2.0.1",
     "@playwright/test": "^1.48.0",
     "@types/inquirer": "^9.0.0",
     "@types/node": "^22.0.0",
+    "@types/pg": "^8.11.0",
+    "pg": "^8.13.0",
     "tsx": "^4.19.0",
     "typescript": "^5.5.0"
   }

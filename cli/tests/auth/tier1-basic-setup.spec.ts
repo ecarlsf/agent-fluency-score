@@ -20,8 +20,10 @@ test.describe("Tier 1 — Basic Setup", () => {
   });
 
   test("sign-up page exists and renders", async ({ page }) => {
-    const response = await page.goto(authFlow.signUpPath);
+    // Use domcontentloaded to handle redirect-based providers (e.g., Auth0 Universal Login)
+    const response = await page.goto(authFlow.signUpPath, { waitUntil: "domcontentloaded" });
     expect(response).not.toBeNull();
+    // Allow redirects (3xx) — hosted auth providers redirect to their domain
     expect(response!.status()).toBeLessThan(500);
     // Should have auth-related content: form fields, textboxes, or auth buttons
     // Handles both embedded forms and hosted auth redirects
@@ -29,11 +31,11 @@ test.describe("Tier 1 — Basic Setup", () => {
       .or(page.getByRole("textbox"))
       .or(page.getByRole("button", { name: /sign up|create account|continue|register/i }))
       .first();
-    await authContent.waitFor({ state: "visible", timeout: 15000 });
+    await authContent.waitFor({ state: "visible", timeout: 20000 });
   });
 
   test("sign-in page exists and renders", async ({ page }) => {
-    const response = await page.goto(authFlow.signInPath);
+    const response = await page.goto(authFlow.signInPath, { waitUntil: "domcontentloaded" });
     expect(response).not.toBeNull();
     expect(response!.status()).toBeLessThan(500);
     // Should have auth-related content
@@ -41,7 +43,7 @@ test.describe("Tier 1 — Basic Setup", () => {
       .or(page.getByRole("textbox"))
       .or(page.getByRole("button", { name: /sign in|log in|continue|login/i }))
       .first();
-    await authContent.waitFor({ state: "visible", timeout: 15000 });
+    await authContent.waitFor({ state: "visible", timeout: 20000 });
   });
 
   test("full sign-up flow completes successfully", async ({ page }) => {
