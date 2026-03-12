@@ -18,6 +18,58 @@ export interface AgentMetrics {
   webFetches: number;
 }
 
+export interface DiffStats {
+  filesCreated: number;
+  filesModified: number;
+  filesDeleted: number;
+  linesAdded: number;
+  linesRemoved: number;
+  packagesAdded: string[];
+  packagesRemoved: string[];
+}
+
+export interface TestDetail {
+  name: string;
+  suiteName: string;
+  file: string;
+  tier: number;
+  status: "passed" | "failed" | "timedOut" | "skipped";
+  durationMs: number;
+}
+
+export interface TestRunResults {
+  testsTotal: number;
+  testsPassed: number;
+  testsFailed: number;
+  testsSkipped: number;
+  testDurationMs: number;
+  testResults: TestDetail[];
+  regressions: TestDetail[];
+}
+
+export interface CycleDetail {
+  taskId: number;
+  cycle: number;
+  promptSent: string;
+  agentExitCode: number;
+  agentSessionId: string | null;
+  agentStdoutHead: string;
+  agentStderrHead: string;
+  agentDurationMs: number;
+  buildExitCode: number | null;
+  buildError: string | null;
+  testExitCode: number | null;
+  testError: string | null;
+  agentTimedOut: boolean;
+  result: "agent_failed" | "build_failed" | "tests_failed" | "passed";
+  metrics: AgentMetrics | null;
+  stopReason?: string | null;
+  agentSubtype?: string | null;
+  agentResultText?: string | null;
+  diffStats?: DiffStats | null;
+  testRunResults?: TestRunResults | null;
+}
+
 export function aggregateMetrics(items: (AgentMetrics | null | undefined)[]): AgentMetrics {
   const result: AgentMetrics = {
     durationMs: 0, apiTimeMs: 0, turns: 0, costUsd: 0,
@@ -40,22 +92,14 @@ export function aggregateMetrics(items: (AgentMetrics | null | undefined)[]): Ag
   return result;
 }
 
-export interface DiffStats {
-  filesCreated: number;
-  filesModified: number;
-  filesDeleted: number;
-  linesAdded: number;
-  linesRemoved: number;
-  packagesAdded: string[];
-  packagesRemoved: string[];
-}
-
 export function aggregateDiffStats(items: (DiffStats | null | undefined)[]): DiffStats {
   const result: DiffStats = {
     filesCreated: 0, filesModified: 0, filesDeleted: 0,
     linesAdded: 0, linesRemoved: 0,
     packagesAdded: [], packagesRemoved: [],
   };
+  const addedSet = new Set<string>();
+  const removedSet = new Set<string>();
   for (const d of items) {
     if (!d) continue;
     result.filesCreated += d.filesCreated;
@@ -63,73 +107,12 @@ export function aggregateDiffStats(items: (DiffStats | null | undefined)[]): Dif
     result.filesDeleted += d.filesDeleted;
     result.linesAdded += d.linesAdded;
     result.linesRemoved += d.linesRemoved;
-    result.packagesAdded.push(...d.packagesAdded);
-    result.packagesRemoved.push(...d.packagesRemoved);
+    for (const p of d.packagesAdded) addedSet.add(p);
+    for (const p of d.packagesRemoved) removedSet.add(p);
   }
-  result.packagesAdded = [...new Set(result.packagesAdded)];
-  result.packagesRemoved = [...new Set(result.packagesRemoved)];
+  result.packagesAdded = [...addedSet].sort();
+  result.packagesRemoved = [...removedSet].sort();
   return result;
-}
-
-export interface TestDetail {
-  name: string;
-  suiteName: string;
-  file: string;
-  tier: number;
-  status: "passed" | "failed" | "timedOut" | "skipped";
-  durationMs: number;
-}
-
-export interface TestRunResults {
-  testsTotal: number;
-  testsPassed: number;
-  testsFailed: number;
-  testsSkipped: number;
-  testDurationMs: number;
-  testResults: TestDetail[];
-  regressions: TestDetail[];
-}
-
-// SOLO taxonomy levels (Biggs & Collis)
-export type SoloLevel = 0 | 1 | 2 | 3 | 4;
-
-export const SOLO_LABELS: Record<SoloLevel, string> = {
-  0: "Prestructural",
-  1: "Unistructural",
-  2: "Multistructural",
-  3: "Relational",
-  4: "Extended Abstract",
-};
-
-// Skill type (Romiszowski)
-export type SkillType = "Reproductive" | "Productive" | "Mixed";
-
-// Cognitive profile (integrated model)
-export interface CognitiveProfile {
-  informationGathering: {
-    webSearches: number;
-    webFetches: number;
-    docDependency: string;
-    cacheReadTokens: number;
-  };
-  buildingUnderstanding: {
-    inputTokens: number;
-    cacheCreationTokens: number;
-  };
-  productiveThinking: {
-    linesAdded: number;
-    linesRemoved: number;
-    filesCreated: number;
-    filesModified: number;
-    packagesAdded: number;
-    outputTokens: number;
-  };
-  strategicReflective: {
-    correctionCycles: number;
-    firstAttemptRate: string;
-    hallucinations: number;
-    regressions: number;
-  };
 }
 
 export interface TaskResult {
@@ -148,31 +131,9 @@ export interface TaskResult {
   stopReason?: string | null;
   agentSubtype?: string | null;
   agentResultText?: string | null;
-  finalTestRunResults?: TestRunResults;
   diffStats?: DiffStats;
+  finalTestRunResults?: TestRunResults;
   noChangesNeeded?: boolean;
-}
-
-export interface CycleDetail {
-  taskId: number;
-  cycle: number;
-  promptSent: string;
-  agentExitCode: number;
-  agentSessionId: string | null;
-  agentStdoutHead: string;
-  agentStderrHead?: string;
-  agentDurationMs: number;
-  buildExitCode: number | null;
-  buildError: string | null;
-  testExitCode: number | null;
-  testError: string | null;
-  agentTimedOut: boolean;
-  result: string;
-  metrics: AgentMetrics | null;
-  stopReason?: string | null;
-  agentSubtype?: string | null;
-  agentResultText?: string | null;
-  testRunResults?: TestRunResults | null;
 }
 
 export interface BenchmarkRun {
@@ -185,9 +146,9 @@ export interface BenchmarkRun {
   startedAt: string;
   completedAt?: string;
   starterProjectCommit?: string;
+  runNumber?: number;
   results: TaskResult[];
   metrics?: AgentMetrics;
-  runNumber?: number;
 }
 
 export interface BenchmarkSummary {
@@ -215,16 +176,67 @@ export interface CategoryDefinition {
   name: string;
   tools: string[];
   tasks: Task[];
-  starterAppPath?: string;
+  starterAppPath?: string;  // relative to project root; defaults to "starter-app"
 }
 
+// ---------------------------------------------------------------------------
+// Tier helpers
+// ---------------------------------------------------------------------------
+
 export function tierNumber(tier: string): number {
-  const mapping: Record<string, number> = {
+  const tierMap: Record<string, number> = {
     "Basic Setup": 1,
     "Core Feature": 2,
-    "Integration": 3,
-    "Production": 4,
-    "Advanced": 5,
+    Integration: 3,
+    Production: 4,
+    Advanced: 5,
+    "Core CRUD": 2,
+    "Complex Queries": 3,
+    "Transactions": 4,
+    "Advanced Patterns": 5,
   };
-  return mapping[tier] ?? 0;
+  return tierMap[tier] || 1;
+}
+
+// ---------------------------------------------------------------------------
+// Cognitive-framework types (SOLO Taxonomy, Romiszowski, Pintrich/Marzano)
+// ---------------------------------------------------------------------------
+
+export type SoloLevel = 0 | 1 | 2 | 3 | 4;
+
+export const SOLO_LABELS: Record<SoloLevel, string> = {
+  0: "Pre-structural",
+  1: "Unistructural",
+  2: "Multistructural",
+  3: "Relational",
+  4: "Extended Abstract",
+};
+
+export type SkillType = "Reproductive" | "Productive" | "Mixed";
+
+export interface CognitiveProfile {
+  informationGathering: {
+    webSearches: number;
+    webFetches: number;
+    docDependency: string;
+    cacheReadTokens: number;
+  };
+  buildingUnderstanding: {
+    inputTokens: number;
+    cacheCreationTokens: number;
+  };
+  productiveThinking: {
+    linesAdded: number;
+    linesRemoved: number;
+    filesCreated: number;
+    filesModified: number;
+    packagesAdded: number;
+    outputTokens: number;
+  };
+  strategicReflective: {
+    correctionCycles: number;
+    firstAttemptRate: string;
+    hallucinations: number;
+    regressions: number;
+  };
 }

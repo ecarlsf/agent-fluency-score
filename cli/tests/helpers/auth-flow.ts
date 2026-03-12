@@ -17,7 +17,7 @@ export function generateTestEmail(): string {
   return `benchmark${Date.now()}@test.example.com`;
 }
 
-export const TEST_PASSWORD = "BenchTest!2026xQ9";
+export const TEST_PASSWORD = process.env.BENCHMARK_TEST_PASSWORD ?? "changeme";
 
 export async function getAuthFlowAsync(toolName: string): Promise<AuthFlow> {
   switch (toolName) {

@@ -44,7 +44,7 @@ export async function setup(
 
   // Copy starter app (excluding .git, node_modules, .next, .env)
   const items = readdirSync(starterDir)
-    .filter((f) => f && f !== ".git" && f !== "node_modules" && f !== ".next" && f !== ".env");
+    .filter((f) => f !== ".git" && f !== "node_modules" && f !== ".next" && f !== ".env");
 
   for (const item of items) {
     const src = path.join(starterDir, item);
@@ -362,10 +362,10 @@ export async function scorecard(category: string, runsDir: string) {
     process.exit(1);
   }
 
-  // Load all runs (supports multi-run archives)
-  const allRuns = loadAllRuns(categoryDir);
+  // Load all runs (multi-run aware)
+  const allRunsMap = loadAllRuns(categoryDir);
 
-  if (allRuns.size === 0) {
+  if (allRunsMap.size === 0) {
     console.log(
       chalk.yellow(
         `\n  No completed benchmark runs found in ${categoryDir}\n`
@@ -374,7 +374,7 @@ export async function scorecard(category: string, runsDir: string) {
     return;
   }
 
-  const markdown = generateScorecard(category, allRuns);
+  const markdown = generateScorecard(category, allRunsMap);
   const outputPath = path.join(categoryDir, "SCORECARD.md");
   writeFileSync(outputPath, markdown);
 
