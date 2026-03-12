@@ -232,6 +232,9 @@ export function calculateSummary(run: BenchmarkRun): BenchmarkSummary {
 
   // Self-Regulation Index (Pintrich's 4 phases)
   const planningQuality = firstAttempt / total;
+  // When hallucination data is unavailable (automated mode), default to 1 (perfect).
+  // This means automated runs are not penalized for unmeasured monitoring — the
+  // self-regulation index reflects only the components that were actually observed.
   const monitoringQuality = totalHallucinations !== null
     ? 1 - Math.min(totalHallucinations / total, 1)
     : 1;
@@ -283,7 +286,7 @@ export function calculateSummary(run: BenchmarkRun): BenchmarkSummary {
     strategicReflective: {
       correctionCycles: totalCycles,
       firstAttemptRate: `${firstAttempt}/${total}`,
-      hallucinations: totalHallucinations ?? 0,
+      hallucinations: totalHallucinations,
       regressions: totalRegressions,
     },
   };

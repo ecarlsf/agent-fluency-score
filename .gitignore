@@ -7,4 +7,4 @@ dist/
 runs/**/node_modules/
 runs/**/.next/
 runs/**/.env
-test-results.json
+cli/tests/test-results.json

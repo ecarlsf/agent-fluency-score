@@ -681,13 +681,13 @@ interface AutoRunOptions {
 function checkSessionIsolation(): void {
   try {
     // Look for other claude processes (excluding our own process tree)
-    const result = execSync("pgrep -f 'claude' 2>/dev/null || true", {
+    const result = execSync("pgrep -x claude 2>/dev/null || true", {
       encoding: "utf-8",
       timeout: 5000,
     }).trim();
     const pids = result.split("\n").filter(Boolean);
-    // pgrep will match our own process and the grep itself; warn if there are extras
-    if (pids.length > 2) {
+    // pgrep -x matches exact process name; warn if any claude processes exist beyond our own
+    if (pids.length > 1) {
       console.log(chalk.yellow.bold(
         "\n╔══════════════════════════════════════════════════════════════╗\n" +
         "║  WARNING: Other Claude Code sessions may be active.        ║\n" +
