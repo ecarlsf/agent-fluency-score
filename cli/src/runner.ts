@@ -1,7 +1,7 @@
 import inquirer from "inquirer";
 import chalk from "chalk";
 import { execSync } from "child_process";
-import { existsSync, readFileSync, writeFileSync, mkdirSync, cpSync } from "fs";
+import { existsSync, readFileSync, readdirSync, writeFileSync, mkdirSync, cpSync } from "fs";
 import path from "path";
 import { BenchmarkRun, TaskResult, CategoryDefinition } from "./types.js";
 import { generateScorecard, calculateSummary } from "./scorecard.js";
@@ -43,8 +43,7 @@ export async function setup(
   mkdirSync(toolDir, { recursive: true });
 
   // Copy starter app (excluding .git, node_modules, .next, .env)
-  const items = execSync(`ls -A ${starterDir}`, { encoding: "utf-8" })
-    .split("\n")
+  const items = readdirSync(starterDir)
     .filter((f) => f && f !== ".git" && f !== "node_modules" && f !== ".next" && f !== ".env");
 
   for (const item of items) {
@@ -366,9 +365,9 @@ export async function scorecard(category: string, runsDir: string) {
   // Find all benchmark-log.json files
   const tools: BenchmarkRun[] = [];
 
-  const entries = execSync(`ls ${categoryDir}`, { encoding: "utf-8" })
-    .split("\n")
-    .filter(Boolean);
+  const entries = readdirSync(categoryDir, { withFileTypes: true })
+    .filter((e) => e.isDirectory())
+    .map((e) => e.name);
 
   for (const entry of entries) {
     const logPath = path.join(categoryDir, entry, "benchmark-log.json");

@@ -40,6 +40,56 @@ export function aggregateMetrics(items: (AgentMetrics | null | undefined)[]): Ag
   return result;
 }
 
+export interface DiffStats {
+  filesCreated: number;
+  filesModified: number;
+  filesDeleted: number;
+  linesAdded: number;
+  linesRemoved: number;
+  packagesAdded: string[];
+  packagesRemoved: string[];
+}
+
+export function aggregateDiffStats(items: (DiffStats | null | undefined)[]): DiffStats {
+  const result: DiffStats = {
+    filesCreated: 0, filesModified: 0, filesDeleted: 0,
+    linesAdded: 0, linesRemoved: 0,
+    packagesAdded: [], packagesRemoved: [],
+  };
+  for (const d of items) {
+    if (!d) continue;
+    result.filesCreated += d.filesCreated;
+    result.filesModified += d.filesModified;
+    result.filesDeleted += d.filesDeleted;
+    result.linesAdded += d.linesAdded;
+    result.linesRemoved += d.linesRemoved;
+    result.packagesAdded.push(...d.packagesAdded);
+    result.packagesRemoved.push(...d.packagesRemoved);
+  }
+  result.packagesAdded = [...new Set(result.packagesAdded)];
+  result.packagesRemoved = [...new Set(result.packagesRemoved)];
+  return result;
+}
+
+export interface TestDetail {
+  name: string;
+  suiteName: string;
+  file: string;
+  tier: number;
+  status: "passed" | "failed" | "timedOut" | "skipped";
+  durationMs: number;
+}
+
+export interface TestRunResults {
+  testsTotal: number;
+  testsPassed: number;
+  testsFailed: number;
+  testsSkipped: number;
+  testDurationMs: number;
+  testResults: TestDetail[];
+  regressions: TestDetail[];
+}
+
 export interface TaskResult {
   taskId: number;
   tier: string;
@@ -53,6 +103,34 @@ export interface TaskResult {
   notes: string;
   timestamp: string;
   metrics?: AgentMetrics;
+  stopReason?: string | null;
+  agentSubtype?: string | null;
+  agentResultText?: string | null;
+  finalTestRunResults?: TestRunResults;
+  diffStats?: DiffStats;
+  noChangesNeeded?: boolean;
+}
+
+export interface CycleDetail {
+  taskId: number;
+  cycle: number;
+  promptSent: string;
+  agentExitCode: number;
+  agentSessionId: string | null;
+  agentStdoutHead: string;
+  agentStderrHead?: string;
+  agentDurationMs: number;
+  buildExitCode: number | null;
+  buildError: string | null;
+  testExitCode: number | null;
+  testError: string | null;
+  agentTimedOut: boolean;
+  result: string;
+  metrics: AgentMetrics | null;
+  stopReason?: string | null;
+  agentSubtype?: string | null;
+  agentResultText?: string | null;
+  testRunResults?: TestRunResults | null;
 }
 
 export interface BenchmarkRun {
@@ -67,6 +145,7 @@ export interface BenchmarkRun {
   starterProjectCommit?: string;
   results: TaskResult[];
   metrics?: AgentMetrics;
+  runNumber?: number;
 }
 
 export interface BenchmarkSummary {
@@ -83,4 +162,16 @@ export interface CategoryDefinition {
   name: string;
   tools: string[];
   tasks: Task[];
+  starterAppPath?: string;
+}
+
+export function tierNumber(tier: string): number {
+  const mapping: Record<string, number> = {
+    "Basic Setup": 1,
+    "Core Feature": 2,
+    "Integration": 3,
+    "Production": 4,
+    "Advanced": 5,
+  };
+  return mapping[tier] ?? 0;
 }

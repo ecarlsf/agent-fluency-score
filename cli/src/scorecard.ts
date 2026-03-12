@@ -1,6 +1,52 @@
+import * as fs from "fs";
+import * as path from "path";
 import { BenchmarkRun, BenchmarkSummary, AgentMetrics, aggregateMetrics } from "./types.js";
 
 const CYCLE_CAP = 10;
+
+// ---------------------------------------------------------------------------
+// Multi-run loading
+// ---------------------------------------------------------------------------
+
+export function loadAllRuns(categoryDir: string): Map<string, BenchmarkRun[]> {
+  const result = new Map<string, BenchmarkRun[]>();
+  if (!fs.existsSync(categoryDir)) return result;
+
+  for (const entry of fs.readdirSync(categoryDir, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
+    const toolDir = path.join(categoryDir, entry.name);
+    const runs: BenchmarkRun[] = [];
+
+    // Collect archived runs
+    for (const f of fs.readdirSync(toolDir)) {
+      if (/^benchmark-log-run\d+\.json$/.test(f)) {
+        try {
+          const data = JSON.parse(fs.readFileSync(path.join(toolDir, f), "utf-8")) as BenchmarkRun;
+          if (data.runNumber === undefined) {
+            data.runNumber = parseInt(f.match(/run(\d+)/)?.[1] ?? "0", 10);
+          }
+          runs.push(data);
+        } catch { /* skip malformed */ }
+      }
+    }
+
+    // Fallback: if no archived runs, use benchmark-log.json as single run
+    if (runs.length === 0) {
+      const logPath = path.join(toolDir, "benchmark-log.json");
+      if (fs.existsSync(logPath)) {
+        try {
+          const data = JSON.parse(fs.readFileSync(logPath, "utf-8")) as BenchmarkRun;
+          if (data.runNumber === undefined) data.runNumber = 1;
+          runs.push(data);
+        } catch { /* skip */ }
+      }
+    }
+
+    runs.sort((a, b) => (a.runNumber ?? 0) - (b.runNumber ?? 0));
+    if (runs.length > 0) result.set(entry.name, runs);
+  }
+  return result;
+}
 
 export function calculateSummary(run: BenchmarkRun): BenchmarkSummary {
   const results = run.results;
@@ -72,8 +118,19 @@ function formatNumber(n: number): string {
 
 export function generateScorecard(
   category: string,
-  runs: BenchmarkRun[]
+  runsOrMap: BenchmarkRun[] | Map<string, BenchmarkRun[]>
 ): string {
+  // Normalize input: accept either a flat array or a Map (multi-run)
+  let runs: BenchmarkRun[];
+  if (runsOrMap instanceof Map) {
+    runs = [];
+    for (const [, toolRuns] of runsOrMap) {
+      if (toolRuns.length > 0) runs.push(toolRuns[toolRuns.length - 1]);
+    }
+  } else {
+    runs = runsOrMap;
+  }
+
   const categoryDisplay = category.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
   const summaries = runs.map(calculateSummary);
 

@@ -1,3 +1,5 @@
+.DS_Store
+*.log
 node_modules/
 .next/
 .env
@@ -5,3 +7,5 @@ dist/
 runs/**/node_modules/
 runs/**/.next/
 runs/**/.env
+cli/test-results/
+cli/tests/test-results.json
