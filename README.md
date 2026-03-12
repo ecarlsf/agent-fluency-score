@@ -1,6 +1,6 @@
 # Agent Fluency Score
 
-An automated benchmark measuring how much friction frameworks introduce when used with AI coding agents. Not "how good is the agent" — **how agent-friendly is the tool.**
+An automated benchmark measuring how much friction frameworks introduce when used with AI coding agents, tested across 8 tools in two categories. Not "how good is the agent" — **how agent-friendly is the tool.**
 
 ## Results — ORM Category
 
@@ -17,7 +17,24 @@ Each tool was tested 2–3 times with identical prompts, a fresh starter app, an
 
 Drizzle completed 80% of tasks on the first attempt across all three runs. TypeORM required twice the wall time and more correction cycles to reach the same outcomes. Kysely and Prisma landed in the middle with similar time profiles but meaningful run-to-run variance.
 
-Auth category results (Clerk, Auth0, NextAuth, PropelAuth) are in progress.
+Full per-tool breakdowns with efficiency metrics and code changes: [ORM Scorecard](runs/orm/SCORECARD.md)
+
+## Results — Auth Category (Preliminary)
+
+Each tool was tested once with identical prompts, a fresh starter app, and a fresh agent session.
+
+| Tool | Runs | First-Attempt Rate | Avg Cycles | Wall Time |
+|------|:----:|:------------------:|:----------:|:---------:|
+| Clerk ⚠️ | 1 | 100% (5/5) | 0 | 8.7m |
+| Auth0 | 1 | 60% (3/5) | 0.6 | 13.5m |
+| PropelAuth | 1 | 60% (3/5) | 0.6 | 11.1m |
+| NextAuth | 1 | 60% (3/5) | 0.8 | 13.3m |
+
+> **⚠️ Auth results are preliminary.** A testing parity issue that gave Clerk an unfair advantage (SDK-level testing integration) has been fixed, but auth benchmarks have not yet been re-collected. ORM results are final.
+
+Clerk achieved a perfect first-attempt rate, but these results should be interpreted with the above caveat. Auth0, PropelAuth, and NextAuth clustered together with similar first-attempt rates and wall times.
+
+Full per-tool breakdowns with efficiency metrics and code changes: [Auth Scorecard](runs/auth/SCORECARD.md)
 
 ## What It Measures
 

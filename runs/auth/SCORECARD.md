@@ -13,15 +13,15 @@
 **Started:** 2026-03-11T04:08:41.448Z
 **Completed:** 2026-03-11T04:28:00.993Z
 
-| # | Tier | First Attempt | Cycles | Hallucinations | Doc Dependency | Outcome | SOLO |
-|---|------|:---:|:---:|:---:|:---:|:---:|:---:|
-| 1 | Basic Setup | ❌ | 1 | 0 | none | working | 2 — Multistructural |
-| 2 | Core Feature | ✅ | 0 | 0 | none | working | 4 — Extended Abstract |
-| 3 | Integration | ✅ | 0 | 0 | none | working | 4 — Extended Abstract |
-| 4 | Production | ✅ | 0 | 0 | none | working | 4 — Extended Abstract |
-| 5 | Advanced | ❌ | 2 | 0 | none | working | 2 — Multistructural |
+| # | Tier | First Attempt | Cycles | Hallucinations | Doc Dependency | Outcome |
+|---|------|:---:|:---:|:---:|:---:|:---:|
+| 1 | Basic Setup | ❌ | 1 | 0 | none | working |
+| 2 | Core Feature | ✅ | 0 | 0 | none | working |
+| 3 | Integration | ✅ | 0 | 0 | none | working |
+| 4 | Production | ✅ | 0 | 0 | none | working |
+| 5 | Advanced | ❌ | 2 | 0 | none | working |
 
-**Pass Rate:** 5/5 · **First-Attempt:** 3/5 · **Avg Cycles:** 0.6 · **Hallucinations:** 0 · **Band: Functional** · **Skill Profile: Reproductive**
+**Pass Rate:** 5/5 · **First-Attempt:** 3/5 · **Avg Cycles:** 0.6 · **Hallucinations:** 0 · **Band: Functional**
 
 ### Efficiency Metrics
 
@@ -63,47 +63,6 @@
 - **Output tokens / turn:** 321
 - **Lines added in corrected tasks:** 414
 - **No-changes tasks:** 3
-- **Metacognitive efficiency:** 0.744 *(tier-weighted, 0-1)*
-- **Self-regulation index:** 0.900 *(planning + monitoring + control + reflection, 0-1)*
-- **Avg SOLO quality:** 3.2 / 4.0
-
-### Cognitive Profile
-
-#### Information-Gathering
-
-| Metric | Value |
-|---|---|
-| Web Searches | 0 |
-| Web Fetches | 0 |
-| Doc Dependency | none |
-| Cache Read Tokens | 4,139,523 |
-
-#### Building Understanding
-
-| Metric | Value |
-|---|---|
-| Input Tokens | 1,006 |
-| Cache Creation Tokens | 451,902 |
-
-#### Productive Thinking
-
-| Metric | Value |
-|---|---|
-| Lines Added | 414 |
-| Lines Removed | 59 |
-| Files Created | 4 |
-| Files Modified | 17 |
-| Packages Added | 1 |
-| Output Tokens | 35,995 |
-
-#### Strategic & Reflective Thinking
-
-| Metric | Value |
-|---|---|
-| Correction Cycles | 3 |
-| First-Attempt Rate | 3/5 |
-| Hallucinations | 0 |
-| Regressions | 0 |
 
 ---
 
@@ -114,15 +73,15 @@
 **Started:** 2026-03-11T03:56:49.402Z
 **Completed:** 2026-03-11T04:08:22.579Z
 
-| # | Tier | First Attempt | Cycles | Hallucinations | Doc Dependency | Outcome | SOLO |
-|---|------|:---:|:---:|:---:|:---:|:---:|:---:|
-| 1 | Basic Setup | ✅ | 0 | 0 | none | working | 4 — Extended Abstract |
-| 2 | Core Feature | ✅ | 0 | 0 | none | working | 4 — Extended Abstract |
-| 3 | Integration | ✅ | 0 | 0 | none | working | 4 — Extended Abstract |
-| 4 | Production | ✅ | 0 | 0 | none | working | 4 — Extended Abstract |
-| 5 | Advanced | ✅ | 0 | 0 | none | working | 4 — Extended Abstract |
+| # | Tier | First Attempt | Cycles | Hallucinations | Doc Dependency | Outcome |
+|---|------|:---:|:---:|:---:|:---:|:---:|
+| 1 | Basic Setup | ✅ | 0 | 0 | none | working |
+| 2 | Core Feature | ✅ | 0 | 0 | none | working |
+| 3 | Integration | ✅ | 0 | 0 | none | working |
+| 4 | Production | ✅ | 0 | 0 | none | working |
+| 5 | Advanced | ✅ | 0 | 0 | none | working |
 
-**Pass Rate:** 5/5 · **First-Attempt:** 5/5 · **Avg Cycles:** 0 · **Hallucinations:** 0 · **Band: Fluent** · **Skill Profile: Reproductive**
+**Pass Rate:** 5/5 · **First-Attempt:** 5/5 · **Avg Cycles:** 0 · **Hallucinations:** 0 · **Band: Fluent**
 
 ### Efficiency Metrics
 
@@ -163,47 +122,6 @@
 - **Total cost / success:** $0.59 *(total spend ÷ working tasks)*
 - **Output tokens / turn:** 276
 - **No-changes tasks:** 3
-- **Metacognitive efficiency:** 1.000 *(tier-weighted, 0-1)*
-- **Self-regulation index:** 1.000 *(planning + monitoring + control + reflection, 0-1)*
-- **Avg SOLO quality:** 4.0 / 4.0
-
-### Cognitive Profile
-
-#### Information-Gathering
-
-| Metric | Value |
-|---|---|
-| Web Searches | 0 |
-| Web Fetches | 0 |
-| Doc Dependency | none |
-| Cache Read Tokens | 2,395,352 |
-
-#### Building Understanding
-
-| Metric | Value |
-|---|---|
-| Input Tokens | 143 |
-| Cache Creation Tokens | 170,926 |
-
-#### Productive Thinking
-
-| Metric | Value |
-|---|---|
-| Lines Added | 459 |
-| Lines Removed | 54 |
-| Files Created | 6 |
-| Files Modified | 14 |
-| Packages Added | 1 |
-| Output Tokens | 20,680 |
-
-#### Strategic & Reflective Thinking
-
-| Metric | Value |
-|---|---|
-| Correction Cycles | 0 |
-| First-Attempt Rate | 5/5 |
-| Hallucinations | 0 |
-| Regressions | 0 |
 
 ---
 
@@ -214,15 +132,15 @@
 **Started:** 2026-03-10T01:38:29.587Z
 **Completed:** 2026-03-10T01:56:30.092Z
 
-| # | Tier | First Attempt | Cycles | Hallucinations | Doc Dependency | Outcome | SOLO |
-|---|------|:---:|:---:|:---:|:---:|:---:|:---:|
-| 1 | Basic Setup | ❌ | 3 | 0 | none | working | 1 — Unistructural |
-| 2 | Core Feature | ✅ | 0 | 0 | none | working | 4 — Extended Abstract |
-| 3 | Integration | ✅ | 0 | 0 | none | working | 4 — Extended Abstract |
-| 4 | Production | ✅ | 0 | 0 | none | working | 4 — Extended Abstract |
-| 5 | Advanced | ❌ | 1 | 0 | none | working | 2 — Multistructural |
+| # | Tier | First Attempt | Cycles | Hallucinations | Doc Dependency | Outcome |
+|---|------|:---:|:---:|:---:|:---:|:---:|
+| 1 | Basic Setup | ❌ | 3 | 0 | none | working |
+| 2 | Core Feature | ✅ | 0 | 0 | none | working |
+| 3 | Integration | ✅ | 0 | 0 | none | working |
+| 4 | Production | ✅ | 0 | 0 | none | working |
+| 5 | Advanced | ❌ | 1 | 0 | none | working |
 
-**Pass Rate:** 5/5 · **First-Attempt:** 3/5 · **Avg Cycles:** 0.8 · **Hallucinations:** 0 · **Band: Functional** · **Skill Profile: Reproductive**
+**Pass Rate:** 5/5 · **First-Attempt:** 3/5 · **Avg Cycles:** 0.8 · **Hallucinations:** 0 · **Band: Functional**
 
 ### Efficiency Metrics
 
@@ -264,47 +182,6 @@
 - **Output tokens / turn:** 251
 - **Lines added in corrected tasks:** 942
 - **No-changes tasks:** 2
-- **Metacognitive efficiency:** 0.783 *(tier-weighted, 0-1)*
-- **Self-regulation index:** 0.775 *(planning + monitoring + control + reflection, 0-1)*
-- **Avg SOLO quality:** 3.0 / 4.0
-
-### Cognitive Profile
-
-#### Information-Gathering
-
-| Metric | Value |
-|---|---|
-| Web Searches | 0 |
-| Web Fetches | 0 |
-| Doc Dependency | none |
-| Cache Read Tokens | 6,126,489 |
-
-#### Building Understanding
-
-| Metric | Value |
-|---|---|
-| Input Tokens | 4,566 |
-| Cache Creation Tokens | 490,107 |
-
-#### Productive Thinking
-
-| Metric | Value |
-|---|---|
-| Lines Added | 1,013 |
-| Lines Removed | 54 |
-| Files Created | 14 |
-| Files Modified | 24 |
-| Packages Added | 3 |
-| Output Tokens | 35,368 |
-
-#### Strategic & Reflective Thinking
-
-| Metric | Value |
-|---|---|
-| Correction Cycles | 4 |
-| First-Attempt Rate | 3/5 |
-| Hallucinations | 0 |
-| Regressions | 0 |
 
 ---
 
@@ -315,15 +192,15 @@
 **Started:** 2026-03-11T04:28:20.341Z
 **Completed:** 2026-03-11T04:54:13.913Z
 
-| # | Tier | First Attempt | Cycles | Hallucinations | Doc Dependency | Outcome | SOLO |
-|---|------|:---:|:---:|:---:|:---:|:---:|:---:|
-| 1 | Basic Setup | ✅ | 0 | 0 | none | working | 4 — Extended Abstract |
-| 2 | Core Feature | ❌ | 2 | 0 | none | working | 2 — Multistructural |
-| 3 | Integration | ✅ | 0 | 0 | none | working | 4 — Extended Abstract |
-| 4 | Production | ✅ | 0 | 0 | none | working | 4 — Extended Abstract |
-| 5 | Advanced | ❌ | 1 | 0 | none | working | 2 — Multistructural |
+| # | Tier | First Attempt | Cycles | Hallucinations | Doc Dependency | Outcome |
+|---|------|:---:|:---:|:---:|:---:|:---:|
+| 1 | Basic Setup | ✅ | 0 | 0 | none | working |
+| 2 | Core Feature | ❌ | 2 | 0 | none | working |
+| 3 | Integration | ✅ | 0 | 0 | none | working |
+| 4 | Production | ✅ | 0 | 0 | none | working |
+| 5 | Advanced | ❌ | 1 | 0 | none | working |
 
-**Pass Rate:** 5/5 · **First-Attempt:** 3/5 · **Avg Cycles:** 0.6 · **Hallucinations:** 0 · **Band: Functional** · **Skill Profile: Reproductive**
+**Pass Rate:** 5/5 · **First-Attempt:** 3/5 · **Avg Cycles:** 0.6 · **Hallucinations:** 0 · **Band: Functional**
 
 ### Efficiency Metrics
 
@@ -364,47 +241,6 @@
 - **Total cost / success:** $1.58 *(total spend ÷ working tasks)*
 - **Output tokens / turn:** 243
 - **Lines added in corrected tasks:** 357
-- **Metacognitive efficiency:** 0.744 *(tier-weighted, 0-1)*
-- **Self-regulation index:** 0.900 *(planning + monitoring + control + reflection, 0-1)*
-- **Avg SOLO quality:** 3.2 / 4.0
-
-### Cognitive Profile
-
-#### Information-Gathering
-
-| Metric | Value |
-|---|---|
-| Web Searches | 0 |
-| Web Fetches | 0 |
-| Doc Dependency | none |
-| Cache Read Tokens | 6,865,156 |
-
-#### Building Understanding
-
-| Metric | Value |
-|---|---|
-| Input Tokens | 184 |
-| Cache Creation Tokens | 584,701 |
-
-#### Productive Thinking
-
-| Metric | Value |
-|---|---|
-| Lines Added | 573 |
-| Lines Removed | 53 |
-| Files Created | 8 |
-| Files Modified | 19 |
-| Packages Added | 1 |
-| Output Tokens | 28,410 |
-
-#### Strategic & Reflective Thinking
-
-| Metric | Value |
-|---|---|
-| Correction Cycles | 3 |
-| First-Attempt Rate | 3/5 |
-| Hallucinations | 0 |
-| Regressions | 0 |
 
 ---
 
@@ -424,26 +260,9 @@
 | Output Tokens | 35,995 | 20,680 | 35,368 | 28,410 |
 | Cache Create Tokens | 451,902 | 170,926 | 490,107 | 584,701 |
 | Cache Read Tokens | 4,139,523 | 2,395,352 | 6,126,489 | 6,865,156 |
-| Web Searches | 0 | 0 | 0 | 0 |
-| Web Fetches | 0 | 0 | 0 | 0 |
 | API Time | 12m 8s | 8m 4s | 11m 24s | 9m 46s |
 | Total Cost / Success | $1.18 | $0.59 | $1.41 | $1.58 |
 | Lines Added | 414 | 459 | 1,013 | 573 |
 | Packages Added | 1 | 1 | 3 | 1 |
-| Regressions | 0 | 0 | 0 | 0 |
-| **Cognitive Metrics** | | | | |
-| Metacognitive Efficiency | 0.744 | 1.000 | 0.783 | 0.744 |
-| Self-Regulation Index | 0.900 | 1.000 | 0.775 | 0.900 |
-| Avg SOLO Quality | 3.2 | 4.0 | 3.0 | 3.2 |
-| Skill Profile | Reproductive | Reproductive | Reproductive | Reproductive |
-| **Information-Gathering** | | | | |
-| Web Searches | 0 | 0 | 0 | 0 |
-| Web Fetches | 0 | 0 | 0 | 0 |
-| Doc Dependency | none | none | none | none |
-| **Productive Thinking** | | | | |
-| Lines Added | 414 | 459 | 1,013 | 573 |
-| Output Tokens | 35,995 | 20,680 | 35,368 | 28,410 |
-| **Strategic & Reflective** | | | | |
 | Correction Cycles | 3 | 0 | 4 | 3 |
-| Hallucinations | 0 | 0 | 0 | 0 |
-
+| Regressions | 0 | 0 | 0 | 0 |
