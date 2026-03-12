@@ -164,10 +164,37 @@ Roll up across all tasks for a given tool:
 
 ---
 
+## Environmental Requirements
+
+Benchmark measurements (wall time, cost, correction cycles) are only meaningful when the test environment is controlled. Violating these requirements produces data that cannot be compared across runs.
+
+### No Concurrent Claude Code Sessions
+
+When multiple Claude Code sessions share the same API account (e.g., Claude Max), API requests are queued behind each other. This causes:
+
+- **Inflated wall time**: A task that completes in 7 minutes solo may take 10+ minutes with contention, hitting the timeout cap.
+- **False timeouts**: Timed-out tasks are recorded as "failed" with $0 cost and 0 tokens — even though the agent was doing real work. The JSON output (containing the session ID) is never written.
+- **Lost session continuity**: When a task times out, subsequent tasks start fresh sessions instead of resuming, burning extra tokens on context rebuilding.
+- **Cost measurement corruption**: Partial runs that are killed before returning JSON output show $0 cost, skewing per-task and per-tool cost comparisons.
+
+The `auto-run` command performs a best-effort check for other `claude` processes before starting and prints a warning if any are detected. This is not bulletproof — close all other sessions manually before running.
+
+### Port Availability
+
+The benchmark starts a Next.js dev server on port 3000 (configurable via `BENCHMARK_PORT` env var) during Playwright E2E verification. If another process is using this port, tests will fail with misleading errors.
+
+Verify the port is free before running: `lsof -i :3000`
+
+### Database Isolation
+
+Each tool gets its own PostgreSQL database (e.g., `afs_auth_clerk`). The `auto-run` command drops and recreates this database at the start of each run to ensure a clean state. The PostgreSQL user defaults to `postgres` and can be overridden with the `PGUSER` env var.
+
 ## Running a Benchmark
 
 ### Pre-Run Checklist
 
+- [ ] **No other Claude Code sessions are active** (API contention corrupts measurements)
+- [ ] **Port 3000** (or `BENCHMARK_PORT`) is free
 - [ ] Starter project is in clean state (Integration mode) or blank scaffold created (Cold Start mode)
 - [ ] Git initialized with clean commit
 - [ ] All tasks for this category written and reviewed

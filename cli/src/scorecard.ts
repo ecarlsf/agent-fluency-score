@@ -177,10 +177,10 @@ export function calculateSummary(run: BenchmarkRun): BenchmarkSummary {
   const firstAttempt = results.filter((r) => r.firstAttemptSuccess).length;
   const totalCycles = results.reduce((sum, r) => sum + r.correctionCycles, 0);
   const avgCycles = totalCycles / total;
-  const totalHallucinations = results.reduce(
-    (sum, r) => sum + r.hallucinationCount,
-    0
-  );
+  const measuredHallucinations = results.filter(r => r.hallucinationCount !== null);
+  const totalHallucinations: number | null = measuredHallucinations.length > 0
+    ? measuredHallucinations.reduce((sum, r) => sum + (r.hallucinationCount ?? 0), 0)
+    : null;
 
   const firstAttemptPct = firstAttempt / total;
 
@@ -232,7 +232,9 @@ export function calculateSummary(run: BenchmarkRun): BenchmarkSummary {
 
   // Self-Regulation Index (Pintrich's 4 phases)
   const planningQuality = firstAttempt / total;
-  const monitoringQuality = 1 - Math.min(totalHallucinations / total, 1);
+  const monitoringQuality = totalHallucinations !== null
+    ? 1 - Math.min(totalHallucinations / total, 1)
+    : 1;
   const tasksNeedingCorrection = results.filter(r => r.correctionCycles > 0).length;
   const tasksFixedQuickly = results.filter(r => r.correctionCycles > 0 && r.correctionCycles <= 2 && r.outcome === "working").length;
   const controlQuality = tasksNeedingCorrection > 0
@@ -259,9 +261,11 @@ export function calculateSummary(run: BenchmarkRun): BenchmarkSummary {
     informationGathering: {
       webSearches: metrics.webSearches,
       webFetches: metrics.webFetches,
-      docDependency: results.filter(r => r.documentationDependency !== "none").length > 0
-        ? `${results.filter(r => r.documentationDependency !== "none").length}/${total} tasks`
-        : "none",
+      docDependency: results.some(r => r.documentationDependency === null)
+        ? "N/A (automated mode)"
+        : results.filter(r => r.documentationDependency !== "none").length > 0
+          ? `${results.filter(r => r.documentationDependency !== "none").length}/${total} tasks`
+          : "none",
       cacheReadTokens: metrics.cacheReadTokens,
     },
     buildingUnderstanding: {
@@ -279,7 +283,7 @@ export function calculateSummary(run: BenchmarkRun): BenchmarkSummary {
     strategicReflective: {
       correctionCycles: totalCycles,
       firstAttemptRate: `${firstAttempt}/${total}`,
-      hallucinations: totalHallucinations,
+      hallucinations: totalHallucinations ?? 0,
       regressions: totalRegressions,
     },
   };
@@ -548,7 +552,7 @@ export function generateScorecard(
       md += `| Metric | Value |\n|---|---|\n`;
       md += `| Web Searches | ${cp.informationGathering.webSearches} |\n`;
       md += `| Web Fetches | ${cp.informationGathering.webFetches} |\n`;
-      md += `| Doc Dependency | N/A (auto-run) |\n`;
+      md += `| Doc Dependency | ${cp.informationGathering.docDependency} |\n`;
       md += `| Cache Read Tokens | ${formatNumber(cp.informationGathering.cacheReadTokens)} |\n`;
       md += `\n`;
 
@@ -572,7 +576,7 @@ export function generateScorecard(
       md += `| Metric | Value |\n|---|---|\n`;
       md += `| Correction Cycles | ${cp.strategicReflective.correctionCycles} |\n`;
       md += `| First-Attempt Rate | ${cp.strategicReflective.firstAttemptRate} |\n`;
-      md += `| Hallucinations | N/A (auto-run) |\n`;
+      md += `| Hallucinations | ${summary.totalHallucinations === null ? "N/A (automated mode)" : summary.totalHallucinations} |\n`;
       md += `| Regressions | ${cp.strategicReflective.regressions} |\n`;
       md += `\n`;
     }
